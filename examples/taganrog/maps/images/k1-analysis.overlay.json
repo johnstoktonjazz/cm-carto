@@ -30,7 +30,17 @@
   {
    "fact_ids": [],
    "features": [
-    {"at": [86.01, 73.14], "fact_ids": [], "id": "poi_health:osm-w471456345", "name": "Центр медицинский реабилитации № 1", "status": "reference", "symbol": "square"},
+    {"at": [86.01, 73.14], "fact_ids": [], "id": "poi_health:osm-w471456345", "name": "Центр медицинский реабилитации № 1", "status": "reference", "symbol": "square"}
+   ],
+   "id": "point_3_1",
+   "kind": "point",
+   "role": "point_3",
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+   "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
     {"at": [205.93, 131.46], "fact_ids": [], "id": "poi_health:ovt-6edb1453-91c9-4bc7-862b-61b0b0e4f9c2", "name": "Таганрогская поликлиника ЮОМЦ ФМБА России", "status": "reference", "symbol": "square"},
     {"at": [136.76, 107.71], "fact_ids": [], "id": "poi_health:ovt-b6aba7b2-b3e8-495a-aec9-53cce5dd4e5d", "name": "Центр красоты и здоровья Пульс г. Таганрог", "status": "reference", "symbol": "square"},
     {"at": [56.91, 68.7], "fact_ids": [], "id": "poi_health:ovt-c461d628-8035-407e-b405-755241a4274c", "name": "Стоматологическая клиника Дента", "status": "reference", "symbol": "square"},
@@ -40,22 +50,32 @@
     {"at": [176.99, 110.94], "fact_ids": [], "id": "poi_health:ovt-fa66ce0a-8307-43e5-82fe-0d390e64cee0", "name": "Поликлиника Водников", "status": "reference", "symbol": "square"},
     {"at": [204.0, 131.77], "fact_ids": [], "id": "poi_health:ovt-fba4281e-0200-4384-b9dd-5a8f985aa3dd", "name": "Больница Портовая", "status": "reference", "symbol": "square"}
    ],
-   "id": "point_3",
+   "id": "point_3_2",
    "kind": "point",
    "role": "point_3",
-   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
    "status": "reference"
   },
   {
    "fact_ids": [],
    "features": [
-    {"at": [168.82, 110.38], "fact_ids": [], "id": "poi_education:osm-w386006885", "name": "Детский сад № 68 «Светлячок»", "status": "reference", "symbol": "circle"},
-    {"at": [109.49, 113.24], "fact_ids": [], "id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "name": "Детский сад № 20 «Красная Шапочка»", "status": "reference", "symbol": "circle"}
+    {"at": [168.82, 110.38], "fact_ids": [], "id": "poi_education:osm-w386006885", "name": "Детский сад № 68 «Светлячок»", "status": "reference", "symbol": "circle"}
    ],
-   "id": "point_2",
+   "id": "point_2_1",
    "kind": "point",
    "role": "point_2",
-   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+   "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"at": [109.49, 113.24], "fact_ids": [], "id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "name": "Детский сад № 20 «Красная Шапочка»", "status": "reference", "symbol": "circle"}
+   ],
+   "id": "point_2_2",
+   "kind": "point",
+   "role": "point_2",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
    "status": "reference"
   },
   {
@@ -63,13 +83,23 @@
    "features": [
     {"at": [80.92, 50.67], "fact_ids": [], "id": "poi_education:osm-w337246600", "name": "Средняя школа № 10", "status": "reference", "symbol": "circle"},
     {"at": [45.41, 74.19], "fact_ids": [], "id": "poi_education:osm-w363365826", "name": "Школа № 9", "status": "reference", "symbol": "circle"},
-    {"at": [115.91, 56.13], "fact_ids": [], "id": "poi_education:osm-w386512211", "name": "Лицей № 4", "status": "reference", "symbol": "circle"},
-    {"at": [42.16, 43.87], "fact_ids": [], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "name": "Гимназия № 2 имени Чехова", "status": "reference", "symbol": "circle"}
+    {"at": [115.91, 56.13], "fact_ids": [], "id": "poi_education:osm-w386512211", "name": "Лицей № 4", "status": "reference", "symbol": "circle"}
    ],
-   "id": "point_1",
+   "id": "point_1_1",
    "kind": "point",
    "role": "point_1",
-   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+   "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"at": [42.16, 43.87], "fact_ids": [], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "name": "Гимназия № 2 имени Чехова", "status": "reference", "symbol": "circle"}
+   ],
+   "id": "point_1_2",
+   "kind": "point",
+   "role": "point_1",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
    "status": "reference"
   },
   {

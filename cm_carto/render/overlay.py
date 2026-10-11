@@ -7,7 +7,8 @@ id (object_id); у фичи — status и fact_ids объекта из геоп�
 role из map.yaml верстки.
 
 Как имена совпадают с map.yaml: role слоя данных — ключ map.yaml: layers; зоны ПЗЗ — слой на категорию, role
-«zoning», category у фичи и строки легенды, id «zoning_<транслит>»; size_role подписи — ключ map.yaml: text.styles;
+«zoning», category у фичи и строки легенды, id «zoning_<транслит>»; один слой данных — один источник
+(source_label, status, fact_ids): у роли из нескольких источников слои «<id>_<n>» с той же role, строка легенды одна; size_role подписи — ключ map.yaml: text.styles;
 symbol — map.yaml: layers.<роль>.marker.shape; служебные слои — role legend, scale_bar, north_arrow; place.name —
 ключ map.yaml: places. Легенда с map.yaml: legend.groups_from строк — группами по уровням (строка kind: group).
 
@@ -59,12 +60,23 @@ CENTROID_GRID_MM = 2.0    # шаг запасных точек подписи п
 BLOCK_STEP_MM = 2.0       # линии overlay для подписей подложки — куски не длиннее (как line_obstacles верстки)
 BLOCK_MARGIN_MM = 0.4     # запас вокруг линии сверх половины толщины
 GLUE = "\u2060"           # временная склейка слов при переносе (WORD JOINER), в текст не попадает
+# Статусы геометрии от надежного к слабому: сводный статус карты и слоя — самый слабый из встреченных.
+STATUSES = ["official", "cadastral", "concept", "digitized", "reference", "calc"]
 TRANSLIT = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
                     ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "i", "k", "l", "m", "n", "o", "p", "r", "s",
                      "t", "u", "f", "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "iu", "ia"]))
 
 
 @cache
+def weakest(statuses) -> str:
+    return max(statuses, key=STATUSES.index)
+
+
+def source_text(row: dict) -> str:
+    """Подпись источника объекта: «подпись, лицензия»."""
+    return ", ".join(v for v in (row["source_label"], row["source_license"]) if v)
+
+
 def schema() -> dict:
     return json.loads(paths.schema("overlay").read_text(encoding="utf-8"))
 
@@ -270,8 +282,9 @@ class Overlay:
 
     # Слои данных
 
-    def data_layer(self, layer_id: str, role: str, kind: str, rows: list[dict], entry: dict, spec_role: dict,
+    def data_layer(self, layer_id: str, role: str, kind: str, rows: list[dict], source: str, spec_role: dict,
                    category: str | None = None) -> dict:
+        """Слой одного источника: status — самый слабый у его объектов (нет объектов — нет и status)."""
         features = []
         for row in sorted(rows, key=lambda r: r["object_id"]):
             for part in parts(row["mm"]):
@@ -286,11 +299,26 @@ class Overlay:
                 feature["status"] = row["status"]
                 feature["fact_ids"] = sorted(json.loads(row["fact_ids"] or "[]"))
                 features.append(feature)
-        layer = {"id": layer_id, "role": role, "kind": kind, "source_label": entry["source"], "status": entry["status"],
-                 "fact_ids": sorted({f for row in rows for f in json.loads(row["fact_ids"] or "[]")})}
+        layer = {"id": layer_id, "role": role, "kind": kind, "source_label": source}
+        if rows:
+            layer["status"] = weakest(row["status"] for row in rows)
+        layer["fact_ids"] = sorted({f for row in rows for f in json.loads(row["fact_ids"] or "[]")})
         if kind != "point":
             layer["simplify_mm"] = SIMPLIFY_MM
         return layer | {"features": features}
+
+    def source_layers(self, layer_id: str, role: str, kind: str, rows: list[dict], entry: dict, spec_role: dict,
+                      category: str | None = None) -> list[dict]:
+        """Слой на источник роли (entry["sources"], у карт сравнения — общие на группу) в порядке источников: один —
+        id layer_id, несколько — «<layer_id>_<n>»; источник без объектов на этой карте — слой без фич (набор слоев
+        роли у карт группы один и тот же). Подвал верстки берет подписи источников из слоев: склейка давала повторы."""
+        sources = entry["sources"]
+        stray = sorted({source_text(row) for row in rows} - set(sources))
+        if stray:
+            raise ValueError(f"роль {role}: источников {stray} нет в перечне роли {sources}")
+        return [self.data_layer(layer_id if len(sources) == 1 else f"{layer_id}_{n}", role, kind,
+                                [row for row in rows if source_text(row) == source], source, spec_role, category)
+                for n, source in enumerate(sources, 1)]
 
     def data_layers(self, drawn: list, entries: dict, cut=None) -> list[dict]:
         """Слои ролей уровней analysis, objects, boundaries снизу вверх (обратный порядок стандарта). cut — полосы улиц
@@ -307,10 +335,10 @@ class Overlay:
                 field = self.std["zoning"]["field"]
                 for value, _ in d.categories():
                     part = [row for row in rows if row[field] == value]
-                    layers.append(self.data_layer(ident(f"zoning_{value}"), "zoning", kind, part,
-                                                  entries[d.role.key], d.spec, category=value))
+                    layers += self.source_layers(ident(f"zoning_{value}"), "zoning", kind, part,
+                                                 entries[d.role.key], d.spec, category=value)
             else:
-                layers.append(self.data_layer(d.role.key, d.role.key, kind, rows, entries[d.role.key], d.spec))
+                layers += self.source_layers(d.role.key, d.role.key, kind, rows, entries[d.role.key], d.spec)
             if kind == "point":
                 r = d.spec["marker"]["size"] / 2
                 self.obstacles += [box(row["mm"].x - r, row["mm"].y - r, row["mm"].x + r, row["mm"].y + r)
@@ -353,7 +381,7 @@ class Overlay:
         rows = out
         sources = []
         for entry in entries.values():
-            sources += [s for s in entry["source"].split("; ") if s not in sources]
+            sources += [s for s in entry["sources"] if s not in sources]
         layer = {"id": "legend", "role": "legend", "kind": "legend", "source_label": "; ".join(sources), "legend": rows}
         if self.spec.legend == "inside":  # левый верхний угол плашки; низ — по точке элемента legend компоновки
             inside = rule["inside"]

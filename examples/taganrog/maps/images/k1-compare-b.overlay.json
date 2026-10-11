@@ -41,18 +41,28 @@
   {
    "fact_ids": [],
    "features": [
-    {"at": [17.16, 33.52], "fact_ids": [], "id": "poi_education:osm-w474008117", "name": "Школа", "status": "reference", "symbol": "circle"},
-    {"at": [52.63, 59.76], "fact_ids": [], "id": "poi_education:osm-w474010898", "status": "reference", "symbol": "circle"},
-    {"at": [53.21, 25.68], "fact_ids": [], "id": "poi_education:osm-w474010902", "name": "Школа № 6", "status": "reference", "symbol": "circle"},
-    {"at": [55.05, 51.19], "fact_ids": [], "id": "poi_education:osm-w97264681", "name": "Школа № 22", "status": "reference", "symbol": "circle"},
     {"at": [36.93, 5.15], "fact_ids": [], "id": "poi_education:ovt-1e3faa2e-cbbe-4adf-a84c-8d4ccdac2acc", "name": "Школа № 23", "status": "reference", "symbol": "circle"},
     {"at": [57.76, 50.78], "fact_ids": [], "id": "poi_education:ovt-94e3bcf4-06d2-4236-b9ba-d69e2f583d5e", "name": "Школа № 22", "status": "reference", "symbol": "circle"},
     {"at": [55.16, 54.27], "fact_ids": [], "id": "poi_education:ovt-e71d1b6b-77aa-4b9a-9b9e-e7f94fba0996", "name": "Средняя общеобразовательная школа № 22", "status": "reference", "symbol": "circle"}
    ],
-   "id": "point_1",
+   "id": "point_1_1",
    "kind": "point",
    "role": "point_1",
-   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"at": [17.16, 33.52], "fact_ids": [], "id": "poi_education:osm-w474008117", "name": "Школа", "status": "reference", "symbol": "circle"},
+    {"at": [52.63, 59.76], "fact_ids": [], "id": "poi_education:osm-w474010898", "status": "reference", "symbol": "circle"},
+    {"at": [53.21, 25.68], "fact_ids": [], "id": "poi_education:osm-w474010902", "name": "Школа № 6", "status": "reference", "symbol": "circle"},
+    {"at": [55.05, 51.19], "fact_ids": [], "id": "poi_education:osm-w97264681", "name": "Школа № 22", "status": "reference", "symbol": "circle"}
+   ],
+   "id": "point_1_2",
+   "kind": "point",
+   "role": "point_1",
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
    "status": "reference"
   },
   {

@@ -327,8 +327,29 @@ def test_compare_group_shares_role_sources(project):
     b.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
     for path in (a, b):
         build.render(path)
-    label = {name: layer(side(project, f"src-{name}", ".overlay.json"), "point_1")["source_label"] for name in "ab"}
-    assert label["a"] == label["b"] == "синтетическая выгрузка OSM, ODbL 1.0; другой источник садов, ODbL 1.0"
+    docs = {name: side(project, f"src-{name}", ".overlay.json") for name in "ab"}
+    found = {name: [(item["id"], item["source_label"], len(item["features"])) for item in doc["layers"]
+                    if item["role"] == "point_1"] for name, doc in docs.items()}
+    assert [x[:2] for x in found["a"]] == [x[:2] for x in found["b"]] == [
+        ("point_1_1", "синтетическая выгрузка OSM, ODbL 1.0"), ("point_1_2", "другой источник садов, ODbL 1.0")]
+    assert found["a"][1][2] == 0 and found["b"][1][2] > 0  # у a садов этого источника нет — слой без фич
+
+
+def test_role_with_two_sources_gives_layer_per_source(project):
+    """Школы из двух источников: два слоя overlay с role point_1, у каждого свой source_label без «; », status и
+    fact_ids; строка легенды одна; overlay по контракту."""
+    raw = yaml.safe_load(describe(project, "two").read_text(encoding="utf-8"))
+    raw["layers"]["point_1"]["where"] = "poi_type IN ('school', 'kindergarten')"
+    (project / "two.yaml").write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+    build.render(project / "two.yaml")
+    doc = side(project, "two", ".overlay.json")
+    jsonschema.Draft202012Validator(json.loads(paths.schema("overlay").read_text(encoding="utf-8"))).validate(doc)
+    found = [item for item in doc["layers"] if item["role"] == "point_1"]
+    assert [item["id"] for item in found] == ["point_1_1", "point_1_2"]
+    assert sorted(item["source_label"] for item in found) == ["другой источник садов, ODbL 1.0",
+                                                               "синтетическая выгрузка OSM, ODbL 1.0"]
+    assert all(item["features"] and "status" in item and "fact_ids" in item for item in found)
+    assert [row["text"] for row in layer(doc, "legend")["legend"]].count("Школы") == 1
 
 
 def test_compare_group_scale_mismatch_is_refused(project):

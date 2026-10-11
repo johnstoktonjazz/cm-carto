@@ -61,8 +61,6 @@ FETCH_RULES = paths.ROOT / "rules" / "fetch.yaml"
 CODE = [*sorted(Path(__file__).parent.glob("*.py")), Path(__file__).with_name("print.yaml"), spec_file.SCHEMA,
         label_rules.RULES, FETCH_RULES]
 SOURCE_FIELDS = ["status", "source_label", "source_license", "source_date"]
-# Статусы геометрии от надежного к слабому: сводный статус карты и слоя — самый слабый из встреченных.
-STATUSES = ["official", "cadastral", "concept", "digitized", "reference", "calc"]
 STREET_ROLES = ("road_express", "road_main", "road_district", "road_local", "road_pedestrian")
 
 
@@ -196,10 +194,6 @@ def export_png(layout: QgsPrintLayout, out: Path, dpi: int) -> None:
         raise RuntimeError(f"{out}: экспорт не удался ({result})")
 
 
-def weakest(statuses) -> str:
-    return max(statuses, key=STATUSES.index)
-
-
 def caption(basemap: list[Drawn]) -> str:
     """Подпись карты (source в provenance): по записи на поставщика и лицензию — «OpenStreetMap через Overture Maps
     2026-09-23.0, ODbL 1.0». Слои подложки перечислены в provenance (layers), в подписи их нет: подпись под картой
@@ -220,7 +214,7 @@ def sources(rows: list[dict]) -> list[str]:
     """Подписи источников объектов в порядке появления: «подпись, лицензия»."""
     out = []
     for row in rows:
-        text = ", ".join(v for v in (row["source_label"], row["source_license"]) if v)
+        text = overlay.source_text(row)
         if text not in out:
             out.append(text)
     return out
@@ -229,7 +223,7 @@ def sources(rows: list[dict]) -> list[str]:
 def layer_entry(d: Drawn) -> dict:
     """Слой на карте: строка легенды, источники, самый слабый статус и самая поздняя дата объектов в охвате."""
     return {"name": d.role.title, "source": "; ".join(sources(d.rows)),
-            "status": weakest(row["status"] for row in d.rows), "date": max(row["source_date"] for row in d.rows)}
+            "status": overlay.weakest(row["status"] for row in d.rows), "date": max(row["source_date"] for row in d.rows)}
 
 
 def blockers(layout: QgsPrintLayout, rects: list) -> None:
@@ -284,7 +278,7 @@ def provenance(spec: Spec, std: dict, style: dict, basemap: list[Drawn]) -> dict
     """Описание подложки по контракту image 1.1.0: слои, источник (caption), дата и статус — только подложки. Статус —
     самый слабый из слоев подложки; статуса нет в image: status — ошибка."""
     layers = [layer_entry(d) for d in basemap]
-    status = weakest(entry["status"] for entry in layers)
+    status = overlay.weakest(entry["status"] for entry in layers)
     if status not in image_schema()["properties"]["status"]["enum"]:
         raise ValueError(f"{spec.path}: статус подложки {status}, в контракте image: status его нет — provenance "
                          f"не выпускается (в подложке: {', '.join(e['name'] for e in layers if e['status'] == status)})")
@@ -330,7 +324,8 @@ def neighbours(spec: Spec, std: dict) -> list[tuple[Spec, Drawn]]:
 def group_entries(spec: Spec, drawn: list[Drawn], others: list[tuple[Spec, Drawn]]) -> dict:
     """Слои данных карты (layer_entry). У роли, найденной и на соседях по сравнению, источник — объединение
     источников роли по картам группы в порядке путей карт, затем объектов: строки у карт группы одни и те же
-    (К-026: одна легенда на группу — и один перечень источников)."""
+    (К-026: одна легенда на группу — и один перечень источников). sources — тот же перечень списком: по слою overlay
+    на источник."""
     entries = {}
     for d in drawn:
         if d.role.level == "basemap":
@@ -341,7 +336,9 @@ def group_entries(spec: Spec, drawn: list[Drawn], others: list[tuple[Spec, Drawn
             found = []
             for _, o in sorted([(spec, d), *same], key=lambda pair: str(pair[0].path.resolve())):
                 found += [text for text in sources(o.rows) if text not in found]
-            entry["source"] = "; ".join(found)
+            entry |= {"source": "; ".join(found), "sources": found}
+        else:
+            entry["sources"] = sources(d.rows)
         entries[d.role.key] = entry
     return entries
 

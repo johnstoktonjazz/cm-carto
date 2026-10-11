@@ -32,11 +32,21 @@
     {"at": [53.77, 15.32], "fact_ids": [], "id": "poi_education:ovt-078ba5db-9bfb-4d7a-b2e1-3f2df7b943c2", "name": "Средняя общеобразовательная школа № 21", "status": "reference", "symbol": "circle"},
     {"at": [62.09, 63.93], "fact_ids": [], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "name": "Гимназия № 2 имени Чехова", "status": "reference", "symbol": "circle"}
    ],
-   "id": "point_1",
+   "id": "point_1_1",
    "kind": "point",
    "role": "point_1",
-   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
    "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+
+   ],
+   "id": "point_1_2",
+   "kind": "point",
+   "role": "point_1",
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0"
   },
   {
    "features": [
