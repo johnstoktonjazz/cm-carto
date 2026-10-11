@@ -19,3 +19,4 @@ dependencies:
   - pyyaml
   - fastmcp
   - pytest
+  - python-pptx       # сборка листов верстки (cm-deck) для проверки стыка
