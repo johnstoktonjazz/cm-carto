@@ -2,8 +2,8 @@
   "file": "k1-analysis.png",
   "kind": "map",
   "title": "Школы, детские сады и медицина в 10 минутах пешком от территории проекта планировки",
-  "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
-  "date": "2026-10-11",
+  "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+  "date": "2026-09-23",
   "status": "reference",
   "size_mm": {
     "width": 251.88,
@@ -11,7 +11,7 @@
   },
   "dpi": 300,
   "crs": "EPSG:32637",
-  "scale": "1:12 000",
+  "scale": "1:11 000",
   "layers": [
     {
       "name": "Магистральная улица",
@@ -45,9 +45,9 @@
     },
     {
       "name": "Кварталы",
-      "source": "синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
       "status": "reference",
-      "date": "2026-10-11"
+      "date": "2026-09-23"
     }
   ]
 }

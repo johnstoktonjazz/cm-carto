@@ -166,14 +166,14 @@
       "stage": 3,
       "title": "контрольная точка К1: verifier, доклад",
       "agent": "verifier",
-      "status": "in_progress",
+      "status": "done",
       "after": [
         "T3.3",
         "T1.3",
         "T2.3",
         "T2.4"
       ],
-      "note": "verifier: блокер — ориентация ребер изохрон (исправляется); image 1.1.0 и overlay в cm-deck — за версткой"
+      "note": "сдана на приемку Роману: образцы с пробной схемой image (reference); листы cm-deck — когда верстка примет overlay"
     },
     {
       "id": "T4.2",
