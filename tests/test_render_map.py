@@ -317,6 +317,19 @@ def test_compare_group_shares_legend(project):
     assert legend["a"] == legend["b"]
 
 
+def test_compare_group_shares_role_sources(project):
+    """Сравнение: у школ на a один источник, на b (школы и сады) — два; source_label роли в обоих overlay один и тот
+    же, источники в порядке путей карт, затем объектов."""
+    a, b = compare_pair(project, "src-")
+    raw = yaml.safe_load(b.read_text(encoding="utf-8"))
+    raw["layers"]["point_1"]["where"] = "poi_type IN ('school', 'kindergarten')"
+    b.write_text(yaml.safe_dump(raw, allow_unicode=True), encoding="utf-8")
+    for path in (a, b):
+        build.render(path)
+    label = {name: layer(side(project, f"src-{name}", ".overlay.json"), "point_1")["source_label"] for name in "ab"}
+    assert label["a"] == label["b"] == "синтетическая выгрузка OSM, ODbL 1.0; другой источник садов, ODbL 1.0"
+
+
 def test_compare_group_scale_mismatch_is_refused(project):
     a, _ = compare_pair(project, "scale-", scale=20000)
     with pytest.raises(ValueError, match="сравнение с scale-b.yaml: масштаб 10000 против 20000"):
