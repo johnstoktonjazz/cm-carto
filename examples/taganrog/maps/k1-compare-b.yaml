@@ -17,7 +17,7 @@ layers:
   railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
   green: {}
   water: {}
-  blocks: {}
+  blocks: {layer: blocks, where: "status = 'reference'"}  # подложка — кварталы по улично-дорожной сети; кварталы ППТ — данные, не фон (К-027)
 title: От станции Таганрог-Пассажирский
 compare_with: [k1-compare-a.yaml]
 out: images/k1-compare-b.png

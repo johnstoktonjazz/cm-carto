@@ -15,6 +15,6 @@ layers:
   railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
   green: {}
   water: {}
-  blocks: {}
+  blocks: {layer: blocks, where: "status = 'reference'"}  # подложка — кварталы по улично-дорожной сети; кварталы ППТ — данные, не фон (К-027)
 title: Территориальные зоны в границах проекта планировки
 out: images/k1-zoning.png

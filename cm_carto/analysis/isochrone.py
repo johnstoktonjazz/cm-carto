@@ -49,8 +49,8 @@ def point_start(g: nx.MultiGraph, point: Point, snap_max: float):
     if gap > snap_max:
         raise ValueError(f"точка дальше {snap_max} м от ближайшего отрезка графа ({gap:.0f} м)")
     along = line.project(point)
-    seeds = {u: along / speed}
-    seeds[v] = min(seeds.get(v, float("inf")), (edge["length"] - along) / speed)
+    seeds = {edge["start"]: along / speed}
+    seeds[edge["end"]] = min(seeds.get(edge["end"], float("inf")), (edge["length"] - along) / speed)
     connector = [LineString([point, line.interpolate(along)])] if gap > 0 else []
     return seeds, ((u, v, key), along), connector
 
@@ -77,10 +77,10 @@ def reach(g: nx.MultiGraph, dist: dict, direct, minutes: float) -> Reach:
     for u, v, key, edge in g.edges(keys=True, data=True):
         w, speed, line = edge["length"], edge["speed_m_min"], edge["line"]
         spans = []
-        if u in dist and dist[u] < minutes:
-            spans.append((0.0, min(w, (minutes - dist[u]) * speed)))
-        if v in dist and dist[v] < minutes:
-            spans.append((max(0.0, w - (minutes - dist[v]) * speed), w))
+        if edge["start"] in dist and dist[edge["start"]] < minutes:
+            spans.append((0.0, min(w, (minutes - dist[edge["start"]]) * speed)))
+        if edge["end"] in dist and dist[edge["end"]] < minutes:
+            spans.append((max(0.0, w - (minutes - dist[edge["end"]]) * speed), w))
         if direct is not None and direct[0] == (u, v, key):
             spans.append((max(0.0, direct[1] - minutes * speed), min(w, direct[1] + minutes * speed)))
         merged = []

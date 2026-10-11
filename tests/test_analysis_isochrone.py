@@ -4,7 +4,9 @@
 import copy
 
 import pytest
-from analysis_fixtures import STOP, lattice, project_in, run, square, stop, street, write_world, X0, Y0
+import shapely
+from shapely.geometry import Point
+from analysis_fixtures import STEP, STOP, lattice, project_in, run, square, stop, street, write_world, X0, Y0
 
 from cm_carto import gpkg
 from cm_carto.analysis import isochrone, params
@@ -105,3 +107,23 @@ def test_cli_isochrone_and_unknown_origin(tmp_path):
     assert len(gpkg.read(project.part("analysis-isochrones"))["isochrones"]) == 2
     with pytest.raises(ValueError, match="не найден"):
         run(command + ["--from", "transit_stops:osm-n404"])
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_edge_piece_starts_from_the_node_it_was_reached_from(tmp_path, reverse):
+    """Линия ребра идет не обязательно от меньшего узла к большему: куски на краю растут от достигнутого конца."""
+    roads = lattice(range(11), range(11))
+    if reverse:
+        for road in roads:
+            road["geometry"] = shapely.reverse(road["geometry"])
+    project = project_in(tmp_path)
+    write_world(project, roads, [stop("osm-n1", 5, 5)])
+    _, _, results = isochrone.compute(project, STOP, "walk", [1.5])
+    reach, geom = results[1.5]
+    centre = Point(X0 + 5 * STEP, Y0 + 5 * STEP)
+    assert reach.length_m == pytest.approx(640)
+    for piece in reach.pieces:
+        for x, y in piece.coords:
+            assert abs(x - centre.x) + abs(y - centre.y) <= 120 + 1e-6
+    assert len(geom.geoms) == 1 and geom.area == pytest.approx(
+        isochrone.polygon(reach, [], None, params.load()["isochrone"]).area)

@@ -27,7 +27,7 @@ cm-carto/scripts/setup_env.sh            # micromamba, QGIS 3.44 и геосте
 | `cm-carto doctor` | QGIS без окна, шрифты из токенов, контракты и стили верстки, пробная карта и повтор байт в байт | готово |
 | `cm-carto ingest <project.yaml> <файл или папка>` | DXF, КПТ, SHP, GPKG → часть геопакета и отчет импорта; рядом с DXF, SHP, GPKG — паспорт `<файл>.source.yaml` (правила, подпись, дата, лицензия) | готово |
 | `cm-carto fetch <project.yaml> <источник>` | Overture, OSM напрямую, реестры (файлом) → часть геопакета, кеш с датой и лицензией, сверка; подключения — `ПОДКЛЮЧЕНИЯ.md` | готово; OSM напрямую и реестры проверены только на синтетике |
-| `cm-carto render` | карта по описанию (`schema/map.schema.json`): PNG в размер места, легенда SVG, `provenance.json` по контракту `image`, кеш | готово |
+| `cm-carto render <описание.yaml> [--preview]` | карта по описанию (`schema/map.schema.json`): подложка PNG в размер места с `provenance.json` (контракт `image`), остальное — `overlay.json` в мм места (контракт `overlay`), превью для проверки, кеш | готово; образцы К1 — `scripts/build_k1.sh`, до image 1.1.0 с `K1_TRIAL_IMAGE=1` |
 | `cm-carto isochrone`, `measure` | изохроны пешком и на автомобиле по графу улиц, измерения как заготовки `CALC` | изохроны и измерения готовы; буферы — этап 4 |
 
 ## Устройство

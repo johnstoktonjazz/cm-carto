@@ -35,7 +35,7 @@ from qgis.PyQt.QtXml import QDomDocument  # noqa: E402
 from cm_carto import paths, tokens  # noqa: E402
 
 PLACE = "thumb"
-CRS = "EPSG:32637"  # любая метрическая; пробный рендер не привязан к проекту
+CRS = "EPSG:3395"  # мировая Меркатора: любая метрическая, пробный рендер не привязан ни к одному проекту
 MIN_QGIS = 34400
 
 

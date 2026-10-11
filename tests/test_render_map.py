@@ -323,3 +323,44 @@ def test_compare_group_repeat_is_byte_identical_and_follows_neighbor(project, tm
                  encoding="utf-8")
     build.render(a)
     assert "из кеша" not in capsys.readouterr().out
+
+
+def test_style_color_changes_basemap_and_preview_not_overlay(project, tmp_path, monkeypatch):
+    """Приемка, п. 3, для style.yaml: роль text (map.yaml: подписи улиц подложки, знаки и подписи данных, легенда)
+    другого цвета — стили их же командой — подписи улиц на подложке и знаки в превью нового цвета; overlay.json
+    цветов не несет и не меняется байт в байт."""
+    design = tmp_path / "cm-design"
+    for folder in ("tokens", "design", "cm_deck", "input/fonts"):
+        shutil.copytree(paths.design() / folder, design / folder)
+    tokens_file = design / "tokens" / "style.yaml"
+    color = tokens.load("style")["colors"]["text"]
+    text = tokens_file.read_text(encoding="utf-8")
+    assert f"  text: {color}\n" in text
+    tokens_file.write_text(text.replace(f"  text: {color}\n", "  text: 1F5FA0\n"), encoding="utf-8")
+    subprocess.run([sys.executable, "-m", "cm_deck.qgis"], cwd=design, check=True,
+                   env={**os.environ, "PYTHONPATH": str(design)})
+    assert "31,95,160" in (design / "design" / "qgis" / "road_main.qml").read_text(encoding="utf-8")
+
+    data = frames()
+    data["roads"][["status", "source_label", "source_date"]] = ["official", "синтетический чертеж, лист 2", "2021-06-01"]
+    gpkg.write(project / "geo" / "streets.gpkg", data, "синтетический проект", CRS.from_user_input(CRS_NAME),
+               CRS_NAME, "sha256:" + "0" * 64)
+    layers = yaml.safe_load(describe(project).read_text(encoding="utf-8"))["layers"]
+    layers["road_main"] = {"layer": "roads", "where": "road_class = 'main'"}
+    build.render(describe(project, "style-before", layers=layers, data="geo/streets.gpkg"), preview=True)
+    monkeypatch.setenv("CM_DESIGN", str(design))
+    build.render(describe(project, "style-after", layers=layers, data="geo/streets.gpkg"), preview=True)
+
+    def colors(suffix: str) -> dict:
+        return {name: {c for _, c in Image.open(project / "maps" / f"style-{name}{suffix}").convert("RGB")
+                       .getcolors(1 << 24)} for name in ("before", "after")}
+    new = (31, 95, 160)
+    old = tuple(int(color[i:i + 2], 16) for i in (0, 2, 4))
+    basemap, shown = colors(".png"), colors(".preview.png")
+    assert old in basemap["before"] and new not in basemap["before"]  # подпись «Главная улица» цвета text
+    assert new in basemap["after"] and old not in basemap["after"]
+    assert old in shown["before"] and new not in shown["before"]
+    assert new in shown["after"] and old not in shown["after"]
+    before = (project / "maps" / "style-before.overlay.json").read_text(encoding="utf-8")
+    after = (project / "maps" / "style-after.overlay.json").read_text(encoding="utf-8")
+    assert before.replace('"style-before.png"', '"style-after.png"') == after

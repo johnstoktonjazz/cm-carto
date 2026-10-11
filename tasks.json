@@ -133,13 +133,23 @@
     {
       "id": "T3.5",
       "stage": 3,
-      "title": "подгонка overlay под контракт cm-contracts/overlay (пришлет Роман)",
+      "title": "render по контракту overlay 1.0.0 (пришел от Романа, подмодуль b3c119f)",
       "agent": "render-dev",
-      "status": "blocked",
+      "status": "done",
       "after": [
         "T3.4"
-      ],
-      "blocked_by": "контракт overlay от Романа"
+      ]
+    },
+    {
+      "id": "T3.6",
+      "stage": 3,
+      "title": "подгонка под overlay 1.1.0 и image 1.1.0 (reference, category, группы легенды, ссылка на overlay)",
+      "agent": "render-dev",
+      "status": "blocked",
+      "blocked_by": "решение Романа и верстки по докладу 2",
+      "after": [
+        "T3.5"
+      ]
     },
     {
       "id": "T4.1",
@@ -162,7 +172,8 @@
         "T1.3",
         "T2.3",
         "T2.4"
-      ]
+      ],
+      "note": "verifier: блокер — ориентация ребер изохрон (исправляется); image 1.1.0 и overlay в cm-deck — за версткой"
     },
     {
       "id": "T4.2",

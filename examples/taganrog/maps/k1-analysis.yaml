@@ -10,7 +10,7 @@ layers:
   point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Детские сады}
   point_3: {layer: poi_health, within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Медицинские учреждения}
   reach_walk: {layer: isochrones, where: "object_id = 'isochrones:walk-10-boundary_planning-ga9cdffac6b20'", title: 10 минут пешком от границы проекта планировки}
-  stop: {layer: transit_stops, within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Остановки и станции}
+  stop: {layer: transit_stops, where: "mode = 'rail'", within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Железнодорожные станции}
   territory: {layer: boundary_planning, title: Граница проекта планировки}
   road_express: {layer: roads, where: "road_class = 'express'"}
   road_main: {layer: roads, where: "road_class = 'main'"}
@@ -18,6 +18,6 @@ layers:
   railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
   green: {}
   water: {}
-  blocks: {}
+  blocks: {layer: blocks, where: "status = 'reference'"}  # подложка — кварталы по улично-дорожной сети; кварталы ППТ — данные, не фон (К-027)
 title: Школы, детские сады и медицина в 10 минутах пешком от территории проекта планировки
 out: images/k1-analysis.png

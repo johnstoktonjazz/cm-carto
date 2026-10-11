@@ -6,7 +6,8 @@
 пересекаются без общей вершины (мост, путепровод, тоннель), не соединяются. Каждая линия режется в своих перекрестках
 и концах. Параллельные ребра между теми же узлами не склеиваются.
 
-Класс улицы без скорости в `rules/analysis.yaml` (null) в графе режима не участвует. Однонаправленность улиц в слое
+Класс улицы без скорости в `rules/analysis.yaml` (null) в графе режима не участвует. Ребро хранит `start` и `end` — узлы начала и конца своей линии (порядок пары в networkx этого не задает).
+Однонаправленность улиц в слое
 roads не хранится: граф неориентированный.
 """
 
@@ -54,5 +55,6 @@ def build(roads: gpd.GeoDataFrame, mode: str, params: dict) -> nx.MultiGraph:
             part = LineString(coords[a:b + 1])
             if part.length > 0:
                 graph.add_edge(node_of[point[a]], node_of[point[b]], line=part, length=part.length,
+                               start=node_of[point[a]], end=node_of[point[b]],
                                speed_m_min=per_minute, minutes=part.length / per_minute)
     return graph
