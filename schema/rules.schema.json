@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cm-carto/rules/1",
+  "title": "Правила раскладки источника в слои геопакета",
+  "description": "Один файл rules/<имя>.yaml: что из чертежа DXF, выписки ЕГРН или векторного файла третьих лиц в какой слой контракта geopackage. Слои и атрибуты слоя дополнительно сверяются с контрактом при загрузке.",
+  "oneOf": [
+    {"$ref": "#/$defs/dxf"},
+    {"$ref": "#/$defs/egrn"},
+    {"$ref": "#/$defs/vector"}
+  ],
+  "$defs": {
+    "status": {"enum": ["official", "cadastral", "digitized", "concept", "reference"]},
+    "patterns": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1},
+      "description": "шаблоны имен (fnmatch): без учета регистра, подчеркивание равно пробелу"
+    },
+    "words": {
+      "type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1},
+      "description": "подстроки в нижнем регистре"
+    },
+    "attrs": {
+      "type": "object", "minProperties": 1,
+      "additionalProperties": {"type": "string"},
+      "description": "постоянные значения атрибутов слоя контракта"
+    },
+    "dxf": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "status", "tolerance_m", "arc_tolerance_m", "ignore", "layers"],
+      "properties": {
+        "type": {"const": "dxf"},
+        "status": {"$ref": "#/$defs/status"},
+        "tolerance_m": {"type": "number", "exclusiveMinimum": 0, "description": "допуск замыкания разрыва контура, м"},
+        "arc_tolerance_m": {"type": "number", "exclusiveMinimum": 0, "description": "допуск аппроксимации дуг и сплайнов, м"},
+        "ignore": {"$ref": "#/$defs/patterns"},
+        "layers": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["target", "drawing", "geometry", "kind"],
+            "properties": {
+              "target": {"type": "string", "pattern": "^[a-z_]+$"},
+              "drawing": {"$ref": "#/$defs/patterns"},
+              "geometry": {"enum": ["polygon", "line"]},
+              "kind": {"type": "string", "minLength": 1},
+              "name": {"type": "string", "pattern": "\\{num\\}", "description": "шаблон названия; {num} — номер из чертежа"},
+              "attrs": {"$ref": "#/$defs/attrs"},
+              "number": {
+                "type": "object", "additionalProperties": false,
+                "required": ["layers", "pattern", "attr"],
+                "properties": {
+                  "layers": {"$ref": "#/$defs/patterns"},
+                  "pattern": {"type": "string", "minLength": 1, "description": "регулярное выражение, которому должен соответствовать весь текст номера"},
+                  "attr": {"type": "string", "minLength": 1, "description": "атрибут слоя контракта, куда пишется номер"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "egrn": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "status", "source_label", "area_tolerance", "parcels", "boundary_types", "zouit_types", "zouit_other_kind", "pzz"],
+      "properties": {
+        "type": {"const": "egrn"},
+        "status": {"$ref": "#/$defs/status"},
+        "source_label": {"type": "string", "description": "подпись источника; {registration_number}, {organ} — реквизиты выписки"},
+        "area_tolerance": {"type": "number", "exclusiveMinimum": 0, "description": "допустимое расхождение площади выписки и контура, доля"},
+        "parcels": {
+          "type": "object", "additionalProperties": false, "required": ["kind"],
+          "properties": {"kind": {"type": "string", "minLength": 1}}
+        },
+        "boundary_types": {
+          "type": "object", "additionalProperties": false, "required": ["zouit", "territorial_zone"],
+          "properties": {"zouit": {"$ref": "#/$defs/words"}, "territorial_zone": {"$ref": "#/$defs/words"}}
+        },
+        "zouit_types": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["contains", "zouit_type", "kind"],
+            "properties": {
+              "contains": {"$ref": "#/$defs/words"},
+              "zouit_type": {"type": "string", "pattern": "^[a-z_]+$"},
+              "kind": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "zouit_other_kind": {"type": "string", "minLength": 1},
+        "pzz": {
+          "type": "object", "additionalProperties": false, "required": ["kind", "zones"],
+          "properties": {
+            "kind": {"type": "string", "minLength": 1},
+            "zones": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["zone", "index"],
+                "properties": {
+                  "zone": {"type": "string", "minLength": 1},
+                  "index": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "буквы индекса зоны до цифры"},
+                  "name_contains": {"$ref": "#/$defs/words"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "vector": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "status", "layers"],
+      "properties": {
+        "type": {"const": "vector"},
+        "status": {"$ref": "#/$defs/status"},
+        "layers": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["source", "target", "kind"],
+            "properties": {
+              "source": {"$ref": "#/$defs/patterns"},
+              "target": {"type": "string", "pattern": "^[a-z_]+$"},
+              "kind": {"type": "string", "minLength": 1},
+              "key": {"type": "string", "minLength": 1, "description": "поле источника с номером для object_id; без него ключ по геометрии"},
+              "name": {"type": "string", "minLength": 1, "description": "поле источника с названием"},
+              "attrs": {
+                "type": "object", "minProperties": 1, "additionalProperties": {"type": "string"},
+                "description": "атрибут слоя контракта: поле источника"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

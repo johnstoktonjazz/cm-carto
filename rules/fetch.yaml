@@ -1,0 +1,236 @@
+# Правила раскладки внешних источников в слои геопакета (cm_carto/fetch). Проектных значений нет.
+# Все слои fetch — status reference; лицензия и подпись берутся из источника записи.
+
+overture:
+  # источник -> столбцы сырой выборки
+  datasets:
+    transportation/segment: {columns: [id, names, subtype, class, subclass, road_flags, rail_flags, sources]}
+    base/water: {columns: [id, names, subtype, class, is_salt, sources]}
+    base/land: {columns: [id, names, subtype, class, sources]}
+    base/land_use: {columns: [id, names, subtype, class, sources]}
+    base/infrastructure: {columns: [id, names, subtype, class, sources]}
+    buildings/building: {columns: [id, names, subtype, class, num_floors, is_underground, sources]}
+    places/place: {columns: [id, names, basic_category, taxonomy, confidence, operating_status, addresses, sources]}
+  # лицензия набора places по правилам Overture (источники внутри — Meta, Foursquare, AllThePlaces и др.)
+  places_license: CDLA-Permissive-2.0
+  # объекты Overture Places с уверенностью ниже порога и закрытые не берутся
+  places_min_confidence: 0.5
+
+labels:
+  osm_overture: "OpenStreetMap через Overture Maps {release}"
+  other_overture: "{dataset} через Overture Maps {release}"
+  places: "Overture Maps Places {release}"
+  osm_direct: "OpenStreetMap, выгрузка {date}"
+  blocks_overture: "OpenStreetMap через Overture Maps {release}, кварталы по улицам"
+  blocks_osm: "OpenStreetMap, выгрузка {date}, кварталы по улицам"
+
+licenses:            # как пишет источник -> как пишем мы
+  ODbL-1.0: ODbL 1.0
+
+# флаги участков сегментов Overture (дороги и железные дороги)
+flags:
+  skip: [is_abandoned, is_disused, is_under_construction]   # участки не берутся
+  tunnel: [is_tunnel, is_covered]                            # участки под землей и под перекрытием
+
+roads:
+  # класс OSM (highway) -> road_class контракта; класс вне списка — ошибка
+  classes:
+    motorway: express
+    trunk: express
+    primary: main
+    secondary: main
+    tertiary: district
+    residential: local
+    unclassified: local
+    living_street: local
+    pedestrian: pedestrian
+    service: service
+    track: service
+    footway: path
+    path: path
+    steps: path
+    cycleway: path
+    bridleway: path
+    unknown: service
+  kind:
+    express: скоростная магистраль
+    main: магистральная улица
+    district: районная улица
+    local: улица местного значения
+    pedestrian: пешеходная улица
+    service: проезд
+    path: пешеходная и велосипедная дорожка
+
+rail:
+  classes:           # класс Overture или railway OSM -> rail_class
+    standard_gauge: main
+    narrow_gauge: main
+    rail: main
+    tram: tram
+    light_rail: tram
+    subway: subway
+  kind:
+    main: железная дорога
+    siding: станционный и подъездной путь
+    tram: трамвайная линия
+    subway: метрополитен
+  siding_service: [siding, yard, spur]       # OSM: railway=rail + service=... -> siding (только прямая выгрузка)
+
+transit_stops:
+  # класс инфраструктуры Overture (base/infrastructure, subtype transit) -> mode; другие классы не берутся
+  classes:
+    bus_stop: bus
+    bus_station: bus
+    trolleybus_stop: trolleybus
+    tram_stop: tram
+    railway_station: rail
+    railway_halt: rail
+    subway_station: subway
+    ferry_terminal: ferry
+  kind:
+    bus: остановка автобуса
+    trolleybus: остановка троллейбуса
+    tram: остановка трамвая
+    rail: железнодорожная станция
+    subway: станция метро
+    ferry: паромный причал
+
+buildings:
+  kind: здание
+  # building_use: subtype Overture / значение тега building в OSM, как в источнике
+
+green:
+  kind: озелененная территория
+  # класс land_use / land Overture -> green_class
+  classes:
+    park: park
+    recreation_ground: park
+    dog_park: park
+    garden: garden
+    flowerbed: garden
+    allotments: garden
+    cemetery: cemetery
+    wood: forest
+    grass: other
+    grassland: other
+    meadow: other
+    scrub: other
+    shrub: other
+
+water:
+  kind: водный объект
+  # класс base/water Overture -> water_class; остальные классы (бассейны, родники, мысы) не берутся
+  classes:
+    ocean: sea
+    sea: sea
+    bay: sea
+    river: river
+    stream: river
+    canal: canal
+    ditch: canal
+    drain: canal
+    pond: lake
+    lake: lake
+    reservoir: reservoir
+    basin: reservoir
+    water: other
+    wastewater: other
+
+poi:
+  # Overture Places (taxonomy.primary) -> [слой, poi_type, kind]
+  places:
+    school: [poi_education, school, школа]
+    elementary_school: [poi_education, school, школа]
+    middle_school: [poi_education, school, школа]
+    high_school: [poi_education, school, школа]
+    preschool: [poi_education, kindergarten, детский сад]
+    day_care_preschool: [poi_education, kindergarten, детский сад]
+    college_university: [poi_education, university, вуз или колледж]
+    hospital: [poi_health, hospital, больница]
+    outpatient_care_facility: [poi_health, clinic, поликлиника или амбулатория]
+    medical_service_organization: [poi_health, clinic, поликлиника или амбулатория]
+    doctors_office: [poi_health, clinic, поликлиника или амбулатория]
+    dental_clinic: [poi_health, dental, стоматология]
+    museum: [poi_culture, museum, музей]
+    art_museum: [poi_culture, museum, музей]
+    history_museum: [poi_culture, museum, музей]
+    library: [poi_culture, library, библиотека]
+    theatre_venue: [poi_culture, theatre, театр]
+    movie_theater: [poi_culture, cinema, кинотеатр]
+    art_gallery: [poi_culture, gallery, галерея]
+    community_center: [poi_culture, community_center, дом культуры]
+    historic_site: [poi_culture, historic_site, историческое место]
+    monument: [poi_culture, monument, памятник]
+    hotel: [poi_hotels, hotel, гостиница]
+    lodging: [poi_hotels, hotel, гостиница]
+    bed_and_breakfast: [poi_hotels, guest_house, мини-отель]
+    private_lodging: [poi_hotels, guest_house, мини-отель]
+    holiday_rental_home: [poi_hotels, guest_house, мини-отель]
+    grocery_store: [poi_other, food_store, продуктовый магазин]
+    convenience_store: [poi_other, food_store, продуктовый магазин]
+    supermarket: [poi_other, food_store, продуктовый магазин]
+    shopping_mall: [poi_other, mall, торговый центр]
+    department_store: [poi_other, mall, торговый центр]
+    pharmacy: [poi_other, pharmacy, аптека]
+    post_office: [poi_other, post_office, почта]
+    bank: [poi_other, bank, банк]
+    police_station: [poi_other, police, полиция]
+    government_office: [poi_other, government, административное здание]
+    town_hall: [poi_other, government, административное здание]
+    courthouse: [poi_other, government, суд]
+    christian_place_of_worship: [poi_other, worship, культовое здание]
+    stadium_arena: [poi_other, stadium, стадион]
+    soccer_stadium: [poi_other, stadium, стадион]
+    swimming_pool: [poi_other, sport, спортивный объект]
+    gym: [poi_other, sport, спортивный объект]
+  # Overture land_use (class) -> [слой, poi_type, kind]; площадной объект становится точкой на поверхности
+  land_use:
+    school: [poi_education, school, школа]
+    kindergarten: [poi_education, kindergarten, детский сад]
+    college: [poi_education, college, колледж]
+    university: [poi_education, university, вуз или колледж]
+    hospital: [poi_health, hospital, больница]
+  # OSM (тег=значение) -> [слой, poi_type, kind]; площадной объект становится точкой на поверхности
+  osm:
+    amenity=school: [poi_education, school, школа]
+    amenity=kindergarten: [poi_education, kindergarten, детский сад]
+    amenity=college: [poi_education, college, колледж]
+    amenity=university: [poi_education, university, вуз или колледж]
+    amenity=hospital: [poi_health, hospital, больница]
+    amenity=clinic: [poi_health, clinic, поликлиника или амбулатория]
+    amenity=doctors: [poi_health, clinic, поликлиника или амбулатория]
+    amenity=dentist: [poi_health, dental, стоматология]
+    tourism=museum: [poi_culture, museum, музей]
+    amenity=library: [poi_culture, library, библиотека]
+    amenity=theatre: [poi_culture, theatre, театр]
+    amenity=cinema: [poi_culture, cinema, кинотеатр]
+    tourism=gallery: [poi_culture, gallery, галерея]
+    amenity=community_centre: [poi_culture, community_center, дом культуры]
+    tourism=hotel: [poi_hotels, hotel, гостиница]
+    tourism=guest_house: [poi_hotels, guest_house, мини-отель]
+    tourism=hostel: [poi_hotels, guest_house, мини-отель]
+    shop=supermarket: [poi_other, food_store, продуктовый магазин]
+    shop=convenience: [poi_other, food_store, продуктовый магазин]
+    shop=mall: [poi_other, mall, торговый центр]
+    amenity=pharmacy: [poi_other, pharmacy, аптека]
+    amenity=post_office: [poi_other, post_office, почта]
+    amenity=bank: [poi_other, bank, банк]
+    amenity=police: [poi_other, police, полиция]
+    amenity=place_of_worship: [poi_other, worship, культовое здание]
+
+blocks:
+  kind: квартал по улично-дорожной сети
+  # классы road_class, образующие кварталы, и полуширина улицы от оси, м
+  half_width_m:
+    express: 14
+    main: 14
+    district: 11
+    local: 8
+    pedestrian: 5
+  min_area_m2: 400        # меньше — не квартал
+  max_area_ha: 150        # больше — не квартал, а открытая территория
+  edge_tolerance_m: 10    # квартал, подходящий к границе охвата ближе, обрезан охватом и отбрасывается
+
+reconcile:
+  distance_m: 150         # объекты реестра и OSM ближе этого расстояния сверяются по названию
+  name_similarity: 0.6    # доля общих слов названий (по меньшему названию)

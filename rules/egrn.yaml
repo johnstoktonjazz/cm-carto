@@ -1,0 +1,31 @@
+# Раскладка выписки ЕГРН «кадастровый план территории» (XML) в слои геопакета. Словари видов — типовые.
+# Берутся только номер, границы, вид использования, категория, площадь: правообладатели в слои не попадают.
+type: egrn
+status: cadastral
+source_label: "КПТ {registration_number}, {organ}"
+area_tolerance: 0.01        # расхождение площади выписки и площади контура больше доли — в отчет «требует подтверждения»
+parcels:
+  kind: земельный участок
+boundary_types:             # как выписка называет тип границы
+  zouit: ["зона с особыми условиями использования территории"]
+  territorial_zone: ["территориальная зона"]
+zouit_types:                # вид ЗОУИТ по тексту выписки; первое совпадение
+  - {contains: ["санитарно-защитная"], zouit_type: sanitary, kind: санитарно-защитная зона}
+  - {contains: ["водоохран"], zouit_type: water_protection, kind: водоохранная зона}
+  - {contains: ["прибрежная защитная"], zouit_type: coastal_strip, kind: прибрежная защитная полоса}
+  - {contains: ["придорожная"], zouit_type: roadside, kind: придорожная полоса}
+  - {contains: ["полоса отвода"], zouit_type: right_of_way, kind: полоса отвода}
+  - {contains: ["культурного наследия", "охраны окн"], zouit_type: heritage_protection, kind: зона охраны ОКН}
+  - {contains: ["приаэродромная", "аэродром"], zouit_type: airfield, kind: приаэродромная территория}
+  - {contains: ["охранная зона"], zouit_type: utility_protection, kind: охранная зона сетей}
+zouit_other_kind: ЗОУИТ прочая
+pzz:
+  kind: территориальная зона
+  zones:                    # категория контракта по буквам индекса зоны, иначе по словам названия
+    - {zone: ОЖ, index: [ОЖ], name_contains: ["общественно-жилая"]}
+    - {zone: Ж, index: [Ж], name_contains: ["жилая", "жилой", "жилые"]}
+    - {zone: ОД, index: [ОД], name_contains: ["делового", "общественного"]}
+    - {zone: П, index: [П], name_contains: ["производственная", "производственной"]}
+    - {zone: ИТ, index: [ИТ], name_contains: ["инженерной", "транспортной"]}
+    - {zone: Р, index: [Р], name_contains: ["рекреационн"]}
+    - {zone: СН, index: [СН], name_contains: ["специального назначения"]}

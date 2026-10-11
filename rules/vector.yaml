@@ -1,0 +1,10 @@
+# Раскладка векторных файлов третьих лиц (SHP, GPKG) в слои геопакета. Типовая: слой или файл источника по шаблону
+# имени → слой контракта; поля источника → атрибуты слоя. Для чужих данных статус reference, лицензия — из паспорта
+# источника (<файл>.source.yaml). Оцифровка с картинки или слайда — статус digitized в отдельном файле правил.
+type: vector
+status: reference
+layers:
+  - {source: ["roads*", "дорог*", "улиц*"], target: roads, kind: улица, key: id, name: name, attrs: {road_class: class}}
+  - {source: ["buildings*", "здани*", "застройк*"], target: buildings_osm, kind: здание, key: id, attrs: {floors: floors}}
+  - {source: ["green*", "зелен*"], target: green, kind: озеленение, attrs: {green_class: class}}
+  - {source: ["water*", "вод*"], target: water, kind: водный объект, attrs: {water_class: class}}
