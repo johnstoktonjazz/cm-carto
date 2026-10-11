@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Контрольная точка К1 на полигоне, полный путь: части геопакета → project.gpkg → четыре карты (подложка PNG +
-# provenance по контракту image + overlay.json по контракту overlay + превью) → временный перевод overlay для cm-deck →
-# три листа cm-deck → линтер верстки → рендер PNG/PDF → контактный лист.
+# Контрольная точка К1 на полигоне, полный путь с чистого клона: выгрузка Overture (если части нет; из кеша
+# inputs/cache, без кеша — с сети) → изохроны, которые называют описания карт (если части нет или ее input_hash
+# устарел) → project.gpkg из частей → четыре карты (подложка PNG + provenance по контракту image + overlay.json по
+# контракту overlay + превью) → временный перевод overlay для cm-deck → три листа cm-deck → линтер верстки → рендер
+# PNG/PDF → контактный лист → копия листов, рендера и отчета линтера в examples/taganrog/sheets/out/.
+# Части ingest-* — в git (К-023); части fetch-* и analysis-* — нет, их собирает этот скрипт.
 # Запуск из любого места: scripts/build_k1.sh
 #
 # Верстка (cm-design, CM_DESIGN) только читается: ее пакеты cm_deck, qa, review работают из зеркала
@@ -24,7 +27,45 @@ if [ -z "${CM_CONTRACTS:-}" ]; then
 fi
 export CM_CONTRACTS
 
-ls "$EX"/geo/parts/fetch-overture.gpkg "$EX"/geo/parts/ingest-*.gpkg >/dev/null
+ls "$EX"/geo/parts/ingest-*.gpkg >/dev/null
+
+echo "== выгрузка Overture"
+if [ -f "$EX/geo/parts/fetch-overture.gpkg" ]; then
+  echo "$EX/geo/parts/fetch-overture.gpkg — есть"
+else
+  "$RUN" cm-carto fetch "$EX/project.yaml" overture
+fi
+
+echo "== изохроны из описаний карт"
+# Изохроны, которые карты называют (within, center, extent, where по object_id). Часть готова, если в ней все они и
+# ее input_hash совпадает с пересчетом по тем же входам, что пишет isochrone.save (правила, система координат,
+# файлы со слоем roads, object_id).
+"$RUN" python - <<PY | while read -r origin mode minutes; do "$RUN" cm-carto isochrone "$EX/project.yaml" --from "$origin" --mode "$mode" --minutes $minutes; done
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from cm_carto import gpkg, project
+from cm_carto.analysis import data, isochrone, params
+p = project.load(Path("$EX/project.yaml"))
+ids = sorted({i for f in Path("$EX/maps").glob("k1-*.yaml") for i in re.findall(r"isochrones:[\w.-]+", f.read_text(encoding="utf-8"))})
+part = p.part("analysis-isochrones")
+if part.exists():
+    have = sorted(gpkg.read(part)["isochrones"]["object_id"])
+    fresh = gpkg.meta(part)["input_hash"] == gpkg.input_hash(params.RULES, p.crs_name, *data.locate(p, "roads"), have)
+    if fresh and set(ids) <= set(have):
+        print(part, "— готова:", ", ".join(ids), file=sys.stderr)
+        sys.exit()
+todo = defaultdict(list)
+for i in ids:
+    mode, minutes, layer, key = re.fullmatch(r"isochrones:(walk|drive)-([\d.]+)-([a-z0-9_]+)-(.+)", i).groups()
+    origin = f"{layer}:{key}"
+    if isochrone.object_id(origin, mode, float(minutes)) != i:
+        raise ValueError(f"{i}: не разобрать на источник, режим и срок")
+    todo[origin, mode].append(minutes)
+for (origin, mode), minutes in sorted(todo.items()):
+    print(origin, mode, " ".join(minutes))
+PY
 
 echo "== геопакет проекта из частей"
 "$RUN" python - <<PY
@@ -69,11 +110,15 @@ mkdir -p "$OUT"
 "${DECK[@]}" build "$EX/sheets" -o "$OUT/k1.pptx"
 echo "== линтер верстки (CM_CONTRACTS=$CM_CONTRACTS)"
 # Ошибки линтера не останавливают рендер и контактный лист (они показывают ошибки на листах); код выхода — в конце.
+# Путь к pptx — от корня репозитория: линтер пишет его в lint.json как передан, а отчет лежит в git.
 lint=0
-"${DECK[@]}" lint "$OUT/k1.pptx" --slides "$EX/sheets" -o "$OUT/lint.json" || lint=$?
+"${DECK[@]}" lint "${OUT#$ROOT/}/k1.pptx" --slides "$EX/sheets" -o "$OUT/lint.json" || lint=$?
 echo "== рендер листов"
 "${DECK[@]}" render "$OUT/k1.pptx" -o "$OUT/render"
 echo "== контактный лист"
 "${DECK[@]}" review "$OUT/k1.pptx" "$OUT/render" -o "$OUT/review/index.html" --lint "$OUT/lint.json"
+echo "== образцы в $EX/sheets/out"
+mkdir -p "$EX/sheets/out"
+cp "$OUT/k1.pptx" "$OUT/lint.json" "$OUT"/render/k1.pdf "$OUT"/render/k1-*.png "$EX/sheets/out/"
 echo "К1: карты $EX/maps/images/; листы $OUT/k1.pptx, $OUT/render/, $OUT/review/index.html; линтер: $([ $lint = 0 ] && echo 0 ошибок || echo есть ошибки, $OUT/lint.json)"
 exit $lint

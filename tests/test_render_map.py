@@ -174,6 +174,7 @@ def test_where_and_labels_follow_rules(project, capsys):
     assert "point_1 ← poi_education (poi_type = 'school'): в охвате 2" in capsys.readouterr().out
     doc = side(project, "map", ".overlay.json")
     assert [f["id"] for f in layer(doc, "point_1")["features"]] == ["poi_education:s1", "poi_education:s2"]
+    assert [f["name"] for f in layer(doc, "point_1")["features"]] == ["Школа №\u00a01", "Школа №\u00a02"]  # имя фигуры — как подпись
     labels = layer(doc, "labels_point_1")["features"]
     assert [f["text"] for f in labels] == ["Школа №\u00a01", "Школа №\u00a02"] and {f["size_role"] for f in labels} == {"label"}
     assert "labels_point_3" not in [item["id"] for item in doc["layers"]]

@@ -1,0 +1,32 @@
+# Синтетический журнал допущений полигона. Записи ASM формата cm-contracts/fact; номера ASM-9xxx временные,
+# настоящие номера даст база (К-028). Скорости изохрон — допущения расчета картографа, не нормы.
+
+- id: ASM-9001
+  kind: assumption
+  subject: средняя скорость пешехода для изохрон, км/ч
+  value: 4.8
+  unit: км/ч
+  status: check
+  author: картограф (cm-carto)
+  date: "2026-10-11"
+  sources:
+    - doc_id: DOC-SYN-0001
+      label: "синтетический образец, не норма"
+      doc_class: C
+      doc_status: reference
+  note: "допущение расчета, номер временный; те же 4,8 км/ч для всех классов улиц, где пешеход проходит"
+
+- id: ASM-9002
+  kind: assumption
+  subject: скорости автомобиля по классам улиц для изохрон, км/ч
+  value: "express 80, main 50, district 40, local 30, service 20"
+  unit: км/ч
+  status: check
+  author: картограф (cm-carto)
+  date: "2026-10-11"
+  sources:
+    - doc_id: DOC-SYN-0001
+      label: "синтетический образец, не норма"
+      doc_class: C
+      doc_status: reference
+  note: "допущение расчета, номер временный; пешеходные улицы и тропы для автомобиля исключены"

@@ -67,7 +67,7 @@ def test_isochrone_row_follows_the_contract(tmp_path):
     row = isochrone.rows(project, STOP, "walk", [10])[0]
     assert row["object_id"] == "isochrones:walk-10-transit_stops-osm-n1"
     assert (row["mode"], row["minutes"], row["speed_kmh"], row["origin_id"]) == ("walk", 10.0, 4.8, STOP)
-    assert row["status"] == "calc" and row["source_license"] == "ODbL 1.0" and row["fact_ids"] == []
+    assert row["status"] == "calc" and row["source_license"] == "ODbL 1.0" and row["fact_ids"] == ["ASM-9001"]
     assert row["source_label"] == "расчет картографа по графу тестовые улицы от 2026-10-11, 4,8 км/ч"
     isochrone.save(project, [row])
     assert gpkg.check(project.part("analysis-isochrones")) == []
@@ -127,3 +127,8 @@ def test_edge_piece_starts_from_the_node_it_was_reached_from(tmp_path, reverse):
             assert abs(x - centre.x) + abs(y - centre.y) <= 120 + 1e-6
     assert len(geom.geoms) == 1 and geom.area == pytest.approx(
         isochrone.polygon(reach, [], None, params.load()["isochrone"]).area)
+
+
+def test_rules_name_temporary_assumptions_for_both_modes():
+    modes = params.load()["modes"]
+    assert (modes["walk"]["assumption_id"], modes["drive"]["assumption_id"]) == ("ASM-9001", "ASM-9002")

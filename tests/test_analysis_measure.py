@@ -34,6 +34,27 @@ def test_drafts_are_check_calc_without_id(tmp_path):
     assert all("2026-10-11" in s["label"] for s in area["sources"])
 
 
+def test_drafts_take_the_speed_assumption_as_input(tmp_path):
+    project = project_with_isochrone(tmp_path)
+    assert all(d["inputs"] == ["ASM-9001"] for d in measure.drafts(project, ISO))
+
+
+def test_layer_source_is_per_part_and_label(tmp_path):
+    """Один слой в двух частях с разными подписями: каждая часть получает подписи своих объектов."""
+    import geopandas as gpd
+    from cm_carto import gpkg
+    project = project_with_isochrone(tmp_path)
+    second = stop("osm-n2", 7, 7)
+    second["source_label"] = "подпись второй части"
+    gpkg.write(project.part("second"), {"transit_stops": gpd.GeoDataFrame([second], geometry="geometry", crs=project.crs)},
+               project.name, project.crs, project.crs_name, "sha256:" + "1" * 64)
+    objects = gpd.GeoDataFrame([stop("osm-n1", 5, 5), second], geometry="geometry", crs=project.crs)
+    got = {s["doc_id"]: s["label"] for s in measure.layer_source(project, "transit_stops", objects)}
+    assert set(got) == {"geopackage:fetch-test:transit_stops", "geopackage:second:transit_stops"}
+    assert "тестовые" not in got["geopackage:second:transit_stops"] and "подпись второй части" in got["geopackage:second:transit_stops"]
+    assert "подпись второй части" not in got["geopackage:fetch-test:transit_stops"]
+
+
 def test_length_is_the_reachable_network(tmp_path):
     """3 мин = 240 м от узла решетки: точки улиц с |x| + |y| <= 240 — по 1200 м вдоль каждого направления улиц."""
     project = project_with_isochrone(tmp_path)

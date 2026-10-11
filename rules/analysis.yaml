@@ -8,12 +8,12 @@ modes:
   walk:
     # road_class контракта -> скорость, км/ч; null — класс в графе режима не участвует
     speed_kmh: {express: null, main: 4.8, district: 4.8, local: 4.8, pedestrian: 4.8, service: 4.8, path: 4.8}
-    assumption_id: null
+    assumption_id: ASM-9001        # временный, номер даст база (К-028); скорость пешком — допущение ASM
     kind: "изохрона {minutes} мин пешком"
     speed_label: "{speed} км/ч"
   drive:
     speed_kmh: {express: 80, main: 50, district: 40, local: 30, pedestrian: null, service: 20, path: null}
-    assumption_id: null
+    assumption_id: ASM-9002        # временный, номер даст база (К-028); скорости автомобиля — допущение ASM
     kind: "изохрона {minutes} мин на автомобиле"
     speed_label: "{speed} км/ч в среднем по достижимой сети, по классам улиц от {min} до {max} км/ч"
 origin:

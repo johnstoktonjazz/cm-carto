@@ -44,16 +44,18 @@ def hits(zone_geom, frame) -> list[dict]:
 def found(project: Project, zone_id: str, layer: str, where: str | None):
     zone = data.one(project, zone_id)
     frame = data.layer(project, layer, where=where, bbox=tuple(zone.geometry.bounds))
+    # участок-источник буфера в своей зоне не считается: он ее породил
+    if "origin_id" in zone and isinstance(zone["origin_id"], str):
+        frame = frame[frame["object_id"] != zone["origin_id"]]
     return zone, frame, hits(zone.geometry, frame)
 
 
 def source_list(project: Project, zone, frame, hit_ids: set, layer: str) -> list[dict]:
-    """Слои зоны и подсчитанных объектов: подписи и даты их источников, без повторов."""
+    """Слои зоны и подсчитанных объектов: по частям, подписи только объектов этой части (зона и попавшие в отбор)."""
     seen, out = set(), []
-    pairs = [(zone["object_id"].split(":")[0], zone["source_label"], zone["source_date"])]
-    pairs += sorted({(layer, r["source_label"], r["source_date"]) for _, r in frame.iterrows() if r["object_id"] in hit_ids})
-    for name, label, date in pairs:
-        for s in measure.layer_source(project, name, label, date):
+    pairs = [(zone["object_id"].split(":")[0], zone.to_frame().T), (layer, frame[frame["object_id"].isin(hit_ids)])]
+    for name, objects in pairs:
+        for s in measure.layer_source(project, name, objects):
             if (s["doc_id"], s["label"]) not in seen:
                 seen.add((s["doc_id"], s["label"]))
                 out.append(s)
@@ -70,6 +72,9 @@ def drafts(project: Project, zone_id: str, layer: str, where: str | None = None)
     ids = [h["object_id"] for h in found_]
     sources = source_list(project, zone, frame, set(ids), layer)
     scope = f"слой {layer}" + (f", отбор «{where}»" if where else "")
+    origin = zone["origin_id"] if isinstance(zone.get("origin_id"), str) else ""
+    if origin.split(":")[0] == layer:
+        scope += f", без объекта-источника зоны {origin}"
     listed = ", ".join(ids[:limit]) + (f" и еще {len(ids) - limit}" if len(ids) > limit else "") if ids else "нет"
     inputs = json.loads(zone["fact_ids"])
 

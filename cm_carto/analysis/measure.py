@@ -31,8 +31,7 @@ def layer_source(project: Project, layer: str, objects) -> list[dict]:
         wanted.setdefault(o["object_id"], (o["source_label"], o["source_date"]))
     out = []
     for f in data.locate(project, layer):
-        ids = set(pyogrio.read_dataframe(f, layer=layer, columns=[], read_geometry=False).index.map(str)) \
-            if False else set(pyogrio.read_dataframe(f, layer=layer, read_geometry=False)["object_id"])
+        ids = set(pyogrio.read_dataframe(f, layer=layer, read_geometry=False)["object_id"])
         for label, date in sorted({wanted[i] for i in ids if i in wanted}):
             out.append({"doc_id": f"geopackage:{f.stem}:{layer}", "label": f"слой {layer}, {label}, выгрузка {date}",
                         "doc_status": "reference"})

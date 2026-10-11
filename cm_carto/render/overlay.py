@@ -138,7 +138,7 @@ class Measure:
     def wrap(self, text: str) -> str:
         """Перенос по словам, строка не длиннее text.wrap_chars знаков (как autoWrapLength стилей верстки). Не делят
         строку: неразрывный пробел («№ 20»), пробел после предлога, союза и сокращения (text.yaml: nbsp.after,
-        abbreviations), перед тире (nbsp.before) и после слова rules/labels.yaml: keep_with_next («имени Чехова»)."""
+        abbreviations), перед тире (nbsp.before) и после слова rules/labels.yaml: keep_with_next («имени Пушкина»)."""
         limit, lines = self.std["text"]["wrap_chars"], []
         nbsp = text_tokens()["nbsp"]
         after = {w.casefold() for w in [*nbsp["after"], *nbsp["abbreviations"],
@@ -216,7 +216,7 @@ class Overlay:
             for part in parts(row["mm"]):
                 feature = {"id": row["object_id"]}
                 if row.get("name"):
-                    feature["name"] = str(row["name"])
+                    feature["name"] = clean_label(str(row["name"]))  # имя фигуры PowerPoint — как текст подписи
                 feature |= shape(part)
                 if kind == "point":
                     feature["symbol"] = spec_role["marker"]["shape"]
