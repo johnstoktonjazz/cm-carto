@@ -1,4 +1,4 @@
 [submodule "cm-contracts"]
 	path = cm-contracts
 	url = https://github.com/johnstoktonjazz/cm-contracts
-	branch = claude/great-wright-7nnzst
+	branch = main
