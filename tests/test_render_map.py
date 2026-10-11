@@ -194,12 +194,13 @@ def test_repeat_is_byte_identical(project, tmp_path, capsys):
     assert "из кеша" in capsys.readouterr().out
 
 
-def test_reference_basemap_is_refused(project):
-    """Подложка из OSM — reference, а в image: status его нет: provenance не выпускается (вопрос к контракту)."""
+def test_reference_basemap_passes_image(project):
+    """Подложка из OSM — reference: в image 1.1.0 статус есть, provenance выпускается и проходит схему."""
     layers = yaml.safe_load(describe(project).read_text(encoding="utf-8"))["layers"]
     layers["road_main"] = {"layer": "roads", "where": "road_class = 'main'"}
-    with pytest.raises(ValueError, match="статус подложки reference"):
-        build.render(describe(project, "osm", layers=layers))
+    out = build.render(describe(project, "osm", layers=layers))
+    provenance = next(p for p in out if p.name.endswith(".provenance.json"))
+    assert json.loads(provenance.read_text(encoding="utf-8"))["status"] == "reference"
 
 
 def test_unknown_role_is_refused(project):
