@@ -184,11 +184,18 @@ def check(path: Path) -> list[str]:
 
 
 def merge(parts: list[Path], out: Path, project_name: str, crs: CRS, crs_name: str) -> Path:
-    """Сборка геопакета проекта из частей: слои одного имени складываются, повтор object_id — ошибка."""
+    """Сборка геопакета проекта из частей: слои одного имени складываются, повтор object_id — ошибка.
+
+    Хэш частей берется до чтения и сверяется после: часть, которую переписывали во время чтения, дала бы неполный
+    геопакет с хэшем готовой части, и он выдавал бы себя за свежий (Э-014)."""
+    parts = sorted(parts)
+    before = input_hash(*parts)
     collected: dict[str, list[gpd.GeoDataFrame]] = {}
-    for part in sorted(parts):
+    for part in parts:
         for name, frame in read(part).items():
             collected.setdefault(name, []).append(frame)
+    if input_hash(*parts) != before:
+        raise RuntimeError(f"части геопакета менялись во время слияния ({', '.join(p.name for p in parts)}): собрать заново")
     frames = {name: gpd.GeoDataFrame(pd.concat(items, ignore_index=True), crs=items[0].crs)
               for name, items in collected.items()}
-    return write(out, frames, project_name, crs, crs_name, input_hash(*sorted(parts)))
+    return write(out, frames, project_name, crs, crs_name, before)

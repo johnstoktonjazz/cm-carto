@@ -81,3 +81,21 @@ def test_integer_attrs_with_gaps_are_written_as_integers(tmp_path):
     out = write(tmp_path / "i.gpkg", frames, doc)
     info = gpkg.pyogrio.read_info(out, layer="poi_education")
     assert dict(zip(info["fields"], info["dtypes"]))["capacity"].startswith("int")
+
+
+def test_merge_refuses_part_changed_while_reading(tmp_path, monkeypatch):
+    """Часть переписали во время слияния — ошибка, а не геопакет с хэшем новой части (Э-014)."""
+    doc, frames = example_frames()
+    a = write(tmp_path / "a.gpkg", {k: v for k, v in frames.items() if k in ("blocks", "roads")}, doc)
+    b = write(tmp_path / "b.gpkg", {k: v for k, v in frames.items() if k not in ("blocks", "roads")}, doc)
+    real = gpkg.read
+
+    def read_and_touch(path):
+        out = real(path)
+        if path == b:
+            b.write_bytes(b.read_bytes() + b"\0")
+        return out
+
+    monkeypatch.setattr(gpkg, "read", read_and_touch)
+    with pytest.raises(RuntimeError, match="менялись во время слияния"):
+        gpkg.merge([a, b], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"])

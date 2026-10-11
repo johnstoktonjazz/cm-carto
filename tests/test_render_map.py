@@ -443,18 +443,20 @@ def test_basemap_label_follows_text_rules(project):
 
 
 def test_caption_merges_one_provider():
-    """Подпись карты: один поставщик и лицензия — одной записью, слои через запятую; уточнение источника слоя
-    («кварталы по улицам») — вместо имени слоя."""
+    """Подпись карты: один поставщик и лицензия — одной записью без перечня слоев (он в layers provenance);
+    уточнение источника слоя («кварталы по улицам») — тот же поставщик."""
     from types import SimpleNamespace as NS
 
     osm = "OpenStreetMap через Overture Maps 2026-09-23.0"
-    drawn = [NS(role=NS(title="Магистральная улица"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
-             NS(role=NS(title="Железная дорога"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
-             NS(role=NS(title="Кварталы"), rows=[{"source_label": f"{osm}, кварталы по улицам",
-                                                  "source_license": "ODbL 1.0"}]),
-             NS(role=NS(title="Водные объекты"), rows=[{"source_label": "чертеж ППТ, лист 2", "source_license": None}])]
-    assert build.caption(drawn) == (f"{osm} (магистральная улица, железная дорога, кварталы по улицам), ODbL 1.0; "
-                                     "чертеж ППТ, лист 2 (водные объекты)")
+    drawn = [NS(role=NS(title="Магистральная улица", layer="roads"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Улица районного значения", layer="roads"),
+                rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Железная дорога", layer="rail"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Кварталы", layer="blocks"), rows=[{"source_label": f"{osm}, кварталы по улицам",
+                                                                  "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Водные объекты", layer="water_ppt"),
+                rows=[{"source_label": "чертеж ППТ, лист 2", "source_license": None}])]
+    assert build.caption(drawn) == f"{osm}, ODbL 1.0; чертеж ППТ, лист 2"
 
 
 def test_legend_groups_from_nine_rows(project):

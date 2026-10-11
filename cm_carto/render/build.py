@@ -201,23 +201,19 @@ def weakest(statuses) -> str:
 
 
 def caption(basemap: list[Drawn]) -> str:
-    """Подпись карты (source в provenance): источники одного поставщика и лицензии — одной записью со слоями через
-    запятую: «OpenStreetMap через Overture Maps 2026-09-23.0 (магистральная улица, …, кварталы по улицам), ODbL 1.0».
-    Подпись источника, которая продолжает другую через запятую («…2026-09-23.0, кварталы по улицам»), — тот же
-    поставщик, и продолжение заменяет имя слоя."""
-    found = [(row["source_label"] or "", row["source_license"] or "", d.role.title)
-             for d in basemap for row in d.rows]
-    labels = {(label, lic) for label, lic, _ in found}
-    groups: dict[tuple, list[str]] = {}
-    for label, lic, title in found:
+    """Подпись карты (source в provenance): по записи на поставщика и лицензию — «OpenStreetMap через Overture Maps
+    2026-09-23.0, ODbL 1.0». Слои подложки перечислены в provenance (layers), в подписи их нет: подпись под картой
+    сравнения шириной в три колонки не вмещала перечень (К-036). Подпись источника, которая продолжает другую через
+    запятую («…2026-09-23.0, кварталы по улицам»), — тот же поставщик."""
+    found = [(row["source_label"] or "", row["source_license"] or "") for d in basemap for row in d.rows]
+    labels = set(found)
+    groups: list[tuple[str, str]] = []
+    for label, lic in found:
         bases = [b for b, other in labels if other == lic and label.startswith(b + ", ")]
-        base = min(bases, key=len) if bases else label
-        name = label[len(base) + 2:] if bases else title[:1].lower() + title[1:]
-        names = groups.setdefault((base, lic), [])
-        if name not in names:
-            names.append(name)
-    return "; ".join(", ".join(x for x in (f"{base} ({', '.join(names)})", lic) if x)
-                     for (base, lic), names in groups.items())
+        key = (min(bases, key=len) if bases else label, lic)
+        if key not in groups:
+            groups.append(key)
+    return "; ".join(", ".join(x for x in key if x) for key in groups)
 
 
 def sources(rows: list[dict]) -> list[str]:
