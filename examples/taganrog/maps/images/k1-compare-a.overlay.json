@@ -1,0 +1,43 @@
+{
+ "basemap": "k1-compare-a.png",
+ "crs": "EPSG:32637",
+ "extent": [493786.3, 5228011.0, 495613.7, 5229789.0],
+ "features": [
+  {"fact_ids": [], "geometry": {"coordinates": [[[56.88, 71.0], [78.55, 58.71], [78.89, 56.83], [58.92, 38.3], [35.78, 51.36], [56.88, 71.0]]], "type": "Polygon"}, "object_id": "boundary_planning:ga9cdffac6b20", "role": "territory", "status": "official"},
+  {"fact_ids": [], "geometry": {"coordinates": [83.57, 68.65], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_2.marker"}, "object_id": "poi_education:osm-w386006885", "role": "point_2", "status": "reference"},
+  {"fact_ids": [], "geometry": {"coordinates": [35.23, 35.81], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_1.marker"}, "object_id": "poi_education:osm-w337246600", "role": "point_1", "status": "reference"},
+  {"fact_ids": [], "geometry": {"coordinates": [15.69, 48.75], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_1.marker"}, "object_id": "poi_education:osm-w363365826", "role": "point_1", "status": "reference"},
+  {"fact_ids": [], "geometry": {"coordinates": [54.47, 38.82], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_1.marker"}, "object_id": "poi_education:osm-w386512211", "role": "point_1", "status": "reference"}
+ ],
+ "format": "cm-carto/overlay-draft/0.1",
+ "labels": [
+  {"align": "bottom-left", "anchor": [85.82, 66.4], "object_id": "poi_education:osm-w386006885", "placement": "around", "role": "point_2", "style": "label", "text": "Детский сад №68 «Светлячок»"},
+  {"align": "bottom-left", "anchor": [37.48, 33.56], "object_id": "poi_education:osm-w337246600", "placement": "around", "role": "point_1", "style": "label", "text": "Средняя школа № 10"},
+  {"align": "bottom-left", "anchor": [17.94, 46.5], "object_id": "poi_education:osm-w363365826", "placement": "around", "role": "point_1", "style": "label", "text": "Школа №9"},
+  {"align": "bottom-left", "anchor": [56.72, 36.57], "object_id": "poi_education:osm-w386512211", "placement": "around", "role": "point_1", "style": "label", "text": "Лицей №4"}
+ ],
+ "layers": [
+  {"date": "2026-09-23", "name": "Школы", "role": "point_1", "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0", "status": "reference"},
+  {"date": "2026-09-23", "name": "Детские сады", "role": "point_2", "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0", "status": "reference"},
+  {"date": "2026-10-11", "name": "Граница проекта планировки", "role": "territory", "source": "синтетический образец: проект планировки, чертеж красных линий", "status": "official"}
+ ],
+ "legend": {
+  "place": 91,
+  "rows": [
+   {"level": "analysis", "role": "point_1", "text": "Школы", "type": "item"},
+   {"level": "analysis", "role": "point_2", "text": "Детские сады", "type": "item"},
+   {"level": "boundaries", "role": "territory", "text": "Граница проекта планировки", "type": "item"}
+  ]
+ },
+ "north": {"position": {"align": "bottom-right", "x": 86.37, "y": 73.79}, "visible": false},
+ "origin": "top-left",
+ "scale": 20000,
+ "scale_bar": {"labels": ["0", "200", "400 м"], "length_mm": 20.0, "position": {"align": "bottom-right", "x": 86.37, "y": 83.9}, "segment_mm": 10.0, "segments": 2},
+ "size_mm": {"height": 88.9, "width": 91.37},
+ "stack": [
+  {"file": "k1-compare-a.png", "kind": "basemap", "roles": ["blocks", "water", "green", "railway", "road_district", "road_main"]},
+  {"kind": "overlay", "roles": ["territory", "point_2", "point_1"]}
+ ],
+ "units": "mm",
+ "y_axis": "down"
+}

@@ -52,7 +52,7 @@ from qgis.core import (  # noqa: E402
 from qgis.PyQt.QtXml import QDomDocument  # noqa: E402
 
 from cm_carto import paths, tokens  # noqa: E402
-from cm_carto.render import overlay, spec as spec_file  # noqa: E402
+from cm_carto.render import overlay, preview as preview_file, spec as spec_file  # noqa: E402
 from cm_carto.render.spec import Role, Spec  # noqa: E402
 
 CACHE = paths.ROOT / "_build" / "cache"
@@ -310,8 +310,9 @@ def cache_key(spec: Spec) -> str:
     return digest.hexdigest()
 
 
-def render(path: Path) -> list[Path]:
-    """Карта по описанию; возвращает записанные файлы. Повтор с теми же входами берется из кеша без рендера."""
+def render(path: Path, preview: bool = False) -> list[Path]:
+    """Карта по описанию; возвращает записанные файлы. Повтор с теми же входами берется из кеша без рендера.
+    preview — еще <out>.preview.png: overlay поверх подложки для проверки глазами (preview.py), не выпуск."""
     spec = spec_file.load(path)
     folder = CACHE / cache_key(spec)
     if folder.is_dir():
@@ -328,4 +329,6 @@ def render(path: Path) -> list[Path]:
         target = spec.out.with_name(name)
         shutil.copyfile(folder / name, target)
         written.append(target)
+    if preview:
+        written.append(preview_file.render(spec.overlay_out, spec.preview_out))
     return written

@@ -5,6 +5,7 @@
 названы в формуле и в `sources`. В `inputs` попадает только номер допущения скорости, если он задан в правилах.
 """
 
+import copy
 import json
 
 import yaml
@@ -33,21 +34,24 @@ def drafts(project: Project, object_id: str) -> list[dict]:
         raise ValueError(f"{object_id}: изохрона в части не совпадает с расчетом по текущим данным и правилам, "
                          "нужен `cm-carto isochrone`")
     layer = iso["origin_id"].split(":")[0]
-    sources = (layer_source(project, "roads", isochrone.single(roads, "source_label"), isochrone.single(roads, "source_date"))
+    roads_label, roads_date = isochrone.single(roads, "source_label"), isochrone.single(roads, "source_date")
+    sources = (layer_source(project, "roads", roads_label, roads_date)
                + layer_source(project, layer, origin["source_label"], origin["source_date"]))
     speed = f"{iso['speed_kmh']:g}".replace(".", ",")
     method = (f"{iso['kind']} от {iso['origin_id']} по графу улиц (слой roads), средняя скорость {speed} км/ч, "
               f"полоса {p['isochrone']['buffer_m']:g} м вокруг достижимых частей отрезков, контур упрощен до "
               f"{p['isochrone']['simplify_m']:g} м")
     inputs = json.loads(iso["fact_ids"])
-    base = {"kind": "calc", "status": "check", "inputs": inputs}
-    area_m2, length_m = iso.geometry.area, reach.length_m
+
+    def draft(what: str, value: float, unit: str, formula: str) -> dict:
+        return {"kind": "calc", "subject": f"{object_id}, {what}", "value": float(round(value, 2)), "unit": unit,
+                "status": "check", "inputs": list(inputs), "formula": f"{formula}; {method}",
+                "sources": copy.deepcopy(sources)}
+
     return [
-        {**base, "subject": f"{object_id}, площадь", "value": float(round(area_m2 / 1e4, 2)), "unit": "га",
-         "formula": f"площадь полигона изохроны, м2 / 10000; {method}", "sources": sources},
-        {**base, "subject": f"{object_id}, длина достижимой сети", "value": float(round(length_m / 1000, 2)), "unit": "км",
-         "formula": f"сумма длин частей отрезков слоя roads, достижимых за {iso['minutes']:g} мин, м / 1000; {method}",
-         "sources": sources},
+        draft("площадь", iso.geometry.area / 1e4, "га", "площадь полигона изохроны, м2 / 10000"),
+        draft("длина достижимой сети", reach.length_m / 1000, "км",
+              f"сумма длин частей отрезков слоя roads, достижимых за {iso['minutes']:g} мин, м / 1000"),
     ]
 
 

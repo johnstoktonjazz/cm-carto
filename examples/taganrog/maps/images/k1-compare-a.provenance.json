@@ -14,24 +14,6 @@
   "scale": "1:20 000",
   "layers": [
     {
-      "name": "Школы",
-      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
-      "status": "reference",
-      "date": "2026-09-23"
-    },
-    {
-      "name": "Детские сады",
-      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
-      "status": "reference",
-      "date": "2026-09-23"
-    },
-    {
-      "name": "Граница проекта планировки",
-      "source": "синтетический образец: проект планировки, чертеж красных линий",
-      "status": "official",
-      "date": "2026-10-11"
-    },
-    {
       "name": "Магистральная улица",
       "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
       "status": "reference",
@@ -67,6 +49,5 @@
       "status": "reference",
       "date": "2026-10-11"
     }
-  ],
-  "legend_file": "k1-compare-a-legend.svg"
+  ]
 }

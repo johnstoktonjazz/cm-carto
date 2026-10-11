@@ -218,4 +218,22 @@ def build(spec, std: dict, style: dict, drawn: list, stack: list, layers: list, 
 
 
 def dumps(doc: dict) -> str:
-    return json.dumps(doc, ensure_ascii=False, sort_keys=True, indent=1) + "\n"
+    """Ключи по алфавиту; элемент списка объектов — одной строкой: файл читается и сравнивается построчно."""
+    def compact(value) -> str:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(", ", ": "))
+
+    lines = []
+    for key in sorted(doc):
+        value = doc[key]
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            items = ",\n".join(f"  {compact(v)}" for v in value)
+            lines.append(f' "{key}": [\n{items}\n ]')
+        elif isinstance(value, dict) and any(isinstance(v, list) and v and isinstance(v[0], dict) for v in value.values()):
+            inner = ",\n".join(f'  "{k}": ' + (("[\n" + ",\n".join(f"   {compact(x)}" for x in v) + "\n  ]")
+                                                if isinstance(v, list) and v and isinstance(v[0], dict) else compact(v))
+                               for k, v in sorted(value.items()))
+            lines.append(f' "{key}": {{\n{inner}\n }}')
+        else:
+            lines.append(f' "{key}": {compact(value)}')
+    text = "{\n" + ",\n".join(lines) + "\n}\n"
+    return text

@@ -1,13 +1,75 @@
 - kind: calc
+  subject: isochrones:drive-10-boundary_planning-ga9cdffac6b20, длина достижимой сети
+  value: 686.7
+  unit: км
   status: check
-  inputs: &id001 []
+  inputs: []
+  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин на автомобиле от boundary_planning:ga9cdffac6b20
+    по графу улиц (слой roads), средняя скорость 27,2 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен
+    до 2 м
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:ingest-ppt-sample:boundary_planning
+    label: 'слой boundary_planning, синтетический образец: проект планировки, чертеж красных линий, выгрузка 2026-10-11'
+    doc_status: reference
+- kind: calc
+  subject: isochrones:drive-10-boundary_planning-ga9cdffac6b20, площадь
+  value: 4563.0
+  unit: га
+  status: check
+  inputs: []
+  formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин на автомобиле от boundary_planning:ga9cdffac6b20 по графу
+    улиц (слой roads), средняя скорость 27,2 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:ingest-ppt-sample:boundary_planning
+    label: 'слой boundary_planning, синтетический образец: проект планировки, чертеж красных линий, выгрузка 2026-10-11'
+    doc_status: reference
+- kind: calc
+  subject: isochrones:walk-10-boundary_planning-ga9cdffac6b20, длина достижимой сети
+  value: 57.55
+  unit: км
+  status: check
+  inputs: []
+  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от boundary_planning:ga9cdffac6b20
+    по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
+    2 м
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:ingest-ppt-sample:boundary_planning
+    label: 'слой boundary_planning, синтетический образец: проект планировки, чертеж красных линий, выгрузка 2026-10-11'
+    doc_status: reference
+- kind: calc
+  subject: isochrones:walk-10-boundary_planning-ga9cdffac6b20, площадь
+  value: 268.01
+  unit: га
+  status: check
+  inputs: []
+  formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин пешком от boundary_planning:ga9cdffac6b20 по графу улиц
+    (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:ingest-ppt-sample:boundary_planning
+    label: 'слой boundary_planning, синтетический образец: проект планировки, чертеж красных линий, выгрузка 2026-10-11'
+    doc_status: reference
+- kind: calc
   subject: isochrones:walk-10-transit_stops-osm-n1501726533, длина достижимой сети
   value: 13.22
   unit: км
+  status: check
+  inputs: []
   formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от transit_stops:osm-n1501726533
     по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
     2 м
-  sources: &id002
+  sources:
   - doc_id: geopackage:fetch-overture:roads
     label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference
@@ -15,24 +77,14 @@
     label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference
 - kind: calc
-  status: check
-  inputs: *id001
   subject: isochrones:walk-10-transit_stops-osm-n1501726533, площадь
   value: 87.01
   unit: га
+  status: check
+  inputs: []
   formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин пешком от transit_stops:osm-n1501726533 по графу улиц (слой
     roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
-  sources: *id002
-- kind: calc
-  status: check
-  inputs: &id003 []
-  subject: isochrones:walk-10-transit_stops-osm-n9683398095, длина достижимой сети
-  value: 26.53
-  unit: км
-  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от transit_stops:osm-n9683398095
-    по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
-    2 м
-  sources: &id004
+  sources:
   - doc_id: geopackage:fetch-overture:roads
     label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference
@@ -40,11 +92,33 @@
     label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference
 - kind: calc
+  subject: isochrones:walk-10-transit_stops-osm-n9683398095, длина достижимой сети
+  value: 26.53
+  unit: км
   status: check
-  inputs: *id003
+  inputs: []
+  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от transit_stops:osm-n9683398095
+    по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
+    2 м
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:transit_stops
+    label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
   subject: isochrones:walk-10-transit_stops-osm-n9683398095, площадь
   value: 132.23
   unit: га
+  status: check
+  inputs: []
   formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин пешком от transit_stops:osm-n9683398095 по графу улиц (слой
     roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
-  sources: *id004
+  sources:
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:transit_stops
+    label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
