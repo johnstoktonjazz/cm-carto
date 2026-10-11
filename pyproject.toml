@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cm-carto"
+version = "0.1.0"
+description = "Картограф инструмента CM: геопакет проекта, карты под места макетов, пространственный анализ"
+requires-python = ">=3.12"
+
+[project.scripts]
+cm-carto = "cm_carto.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cm_carto*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

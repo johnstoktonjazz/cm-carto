@@ -1,0 +1,21 @@
+# Окружение картографа: QGIS 3.44 LTR и геостек с conda-forge.
+#   micromamba create -y -p <env> -f environment.yml && micromamba run -p <env> pip install -e .
+name: cm-carto
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - qgis=3.44
+  - geopandas
+  - shapely
+  - pyogrio
+  - pyproj
+  - rasterio
+  - ezdxf
+  - osmnx
+  - networkx
+  - pyarrow
+  - duckdb
+  - jsonschema
+  - pyyaml
+  - fastmcp
+  - pytest

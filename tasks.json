@@ -1,0 +1,23 @@
+{
+  "updated": "2026-10-11",
+  "tasks": [
+    {"id": "T0.1", "stage": 0, "title": "окружение QGIS 3.44 без окна, doctor", "agent": "оркестратор", "status": "done"},
+    {"id": "T0.2", "stage": 0, "title": "клоны cm-contracts (подмодуль) и cm-design", "agent": "оркестратор", "status": "done"},
+    {"id": "T0.3", "stage": 0, "title": "город-полигон, анкета, проба внешних данных", "agent": "оркестратор", "status": "done"},
+    {"id": "T1.0", "stage": 1, "title": "контракт geopackage 1.1.0, модуль gpkg (запись, проверка, слияние)", "agent": "оркестратор", "status": "done"},
+    {"id": "T1.1", "stage": 1, "title": "синтетические DXF ППТ и КПТ на полигоне", "agent": "ingest-dev", "status": "todo"},
+    {"id": "T1.2", "stage": 1, "title": "ingest DXF по правилам раскладки, починка контуров, отчет импорта", "agent": "ingest-dev", "status": "todo", "after": ["T1.1"]},
+    {"id": "T1.3", "stage": 1, "title": "ingest КПТ и выписок ЕГРН (XML)", "agent": "ingest-dev", "status": "todo", "after": ["T1.1"]},
+    {"id": "T2.1", "stage": 2, "title": "fetch Overture (OSM): улицы, ж/д, остановки, застройка, зелень, вода, учреждения", "agent": "fetch-dev", "status": "todo"},
+    {"id": "T2.2", "stage": 2, "title": "fetch OSM напрямую (Overpass, Geofabrik) для Mac", "agent": "fetch-dev", "status": "todo"},
+    {"id": "T2.3", "stage": 2, "title": "подключения реестров (bus.gov.ru, ОКН, гостиницы, ДТП, Росстат, НСПД), ПОДКЛЮЧЕНИЯ.md", "agent": "fetch-dev", "status": "todo"},
+    {"id": "T2.4", "stage": 2, "title": "сверка объектов между источниками", "agent": "fetch-dev", "status": "todo", "after": ["T2.1"]},
+    {"id": "T3.1", "stage": 3, "title": "схема описания карты schema/map.schema.json", "agent": "render-dev", "status": "todo"},
+    {"id": "T3.2", "stage": 3, "title": "render через PyQGIS по стилям верстки, легенда, provenance по контракту image", "agent": "render-dev", "status": "todo", "after": ["T3.1"]},
+    {"id": "T3.3", "stage": 3, "title": "три образца карт на полигоне и листы через cm-deck", "agent": "render-dev", "status": "todo", "after": ["T3.2", "T1.2", "T2.1", "T4.1"]},
+    {"id": "T4.1", "stage": 4, "title": "изохроны пешком и на автомобиле на графе OSM", "agent": "analysis-dev", "status": "todo", "after": ["T2.1"]},
+    {"id": "K1", "stage": 3, "title": "контрольная точка К1: verifier, доклад", "agent": "verifier", "status": "todo", "after": ["T3.3", "T1.3", "T2.3", "T2.4"]},
+    {"id": "T4.2", "stage": 4, "title": "буферы по NORM, пересечения, подсчет, заготовки CALC", "agent": "analysis-dev", "status": "todo", "after": ["K1"]},
+    {"id": "T5.1", "stage": 5, "title": "CLI, MCP, qgis-mcp, перенос на Mac", "agent": "mcp-dev", "status": "todo", "after": ["K1"]}
+  ]
+}
