@@ -98,7 +98,7 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
             for f in layer["features"]:
                 key = owner.get((layer["role"], f["id"]), layer_key(layer["role"]))
                 style_key = f.get("size_role", "label")
-                rows = lines_of(f, measure, std)
+                rows, callout = lines_of(f, measure, std), []
                 if "leader_to" in f:
                     key = "leader"
                     text, x, y, anchor = rows[0]
@@ -107,9 +107,9 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
                         to = [x, y + measure.size(text, style_key)[1] / 2 + gap]
                     else:
                         to = [x - gap if anchor == "l" else x + gap, y]
-                    elements.append({"kind": "callout", "id": element_id(f["id"], seen, key), "layer": key,
-                                     "at_mm": f["leader_to"], "to_mm": [round(v, 2) for v in to], "text": text,
-                                     "anchor": anchor, "style": style_key})
+                    callout = [{"kind": "callout", "id": element_id(f["id"], seen, key), "layer": key,
+                                "at_mm": f["leader_to"], "to_mm": [round(v, 2) for v in to], "text": text,
+                                "anchor": anchor, "style": style_key}]
                     rows = rows[1:]
                 # Нижняя строка — первой: у каждой строки своя плашка, и плашка верхней строки ложится на поле над
                 # буквами нижней, а не на низ букв верхней (верстка рисует подписи одного слоя в порядке элементов).
@@ -117,6 +117,7 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
                     elements.append({"kind": "text", "id": element_id(f["id"], seen, key), "layer": key,
                                      "at_mm": [round(x, 2), round(y, 2)], "text": text, "anchor": anchor,
                                      "style": style_key})
+                elements += callout  # первая строка с выноской — последней, поверх плашек нижних строк
         elif kind == "legend":
             out["legend"] = [{"layer": layer_key(row["role"]), "label": row["text"]} for row in layer["legend"]]
             out["legend_inside"] = "legend_at" in layer
