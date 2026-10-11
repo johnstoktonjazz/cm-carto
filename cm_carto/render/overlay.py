@@ -195,6 +195,65 @@ def number(value: float, style: dict) -> str:
     return whole + (style["number_format"]["decimal"] + fraction if fraction else "")
 
 
+CORNERS = {"bottom_right": "правый нижний", "bottom_left": "левый нижний"}  # углы линейки (map.yaml: scale_bar)
+
+
+def mirror(rect, width: float) -> tuple[float, float, float, float]:
+    """Прямоугольник, отраженный по ширине места: из правого угла в левый с тем же отступом от края."""
+    x0, y0, x1, y1 = rect
+    return width - x1, y0, width - x0, y1
+
+
+def data_hit(rect, layers: list[dict], std: dict) -> str | None:
+    """Первый объект «<слой>:<id>» слоев данных overlay, которого касается прямоугольник, как у верстки
+    (cm_deck/overlay_make.py: data_hit): линия и контур площади без заливки и штриховки — с запасом половины толщины
+    линии (края залитых зон не в счет); знак точки — кругом или квадратом из токенов (размер и обводка). None — свободно."""
+    plate = box(*rect)
+    for layer in layers:
+        kind, role = layer["kind"], layer["role"]
+        if kind not in ("polygon", "line", "point") or role not in std["layers"]:
+            continue
+        spec = std["layers"][role]
+        if kind == "polygon" and (role == "zoning" or {"fill", "hatch"} & set(spec)):
+            continue
+        for feature in layer["features"]:
+            if kind == "point":
+                marker = spec["marker"]
+                r = (marker["size"] + marker["stroke"]["width"]) / 2
+                x, y = feature["at"]
+                hit = (plate.distance(Point(x, y)) < r if marker["shape"] == "circle"
+                       else plate.intersects(box(x - r, y - r, x + r, y + r)))
+            else:
+                paths = feature["rings"] if kind == "polygon" else [feature["path"]]
+                grown = box(*plate.buffer(spec["stroke"]["width"] / 2, join_style="mitre").bounds)
+                hit = any(grown.intersects(LineString(path)) for path in paths)
+            if hit:
+                return f"{layer['id']}:{feature['id']}"
+    return None
+
+
+def choose_corner(std: dict, width: float, right, layers: list[dict], legend) -> tuple[str, tuple]:
+    """Угол линейки по map.yaml: scale_bar.position (Д-054): первый угол из списка, где плашка не касается объектов
+    слоев данных (data_hit); при легенде внутри карты (`legend` — ее плашка) левый нижний угол занят легендой.
+    `right` — плашка в правом нижнем углу по компоновке, левая — ее отражение. Все углы заняты — ValueError: сдвинуть
+    охват (линейку не двигают). Возвращает (угол, плашка)."""
+    order = std["scale_bar"]["position"]
+    if not (isinstance(order, list) and order and len(set(order)) == len(order) and set(order) <= set(CORNERS)):
+        raise ValueError(f"map.yaml: scale_bar.position — список углов без повторов из {', '.join(CORNERS)}, "
+                         f"дано {order!r}")
+    reasons = []
+    for corner in order:
+        rect = right if corner == "bottom_right" else mirror(right, width)
+        hit = data_hit(rect, layers, std)
+        if hit is None and legend is not None and (corner == "bottom_left" or box(*rect).intersects(box(*legend))):
+            hit = "легенда"
+        if hit is None:
+            return corner, rect
+        reasons.append(f"{CORNERS[corner]} угол — {hit}")
+    raise ValueError(f"линейка не помещается: {'; '.join(reasons)}; сдвинуть охват карты "
+                     f"(линейку не двигают, map.yaml: scale_bar.position)")
+
+
 class Overlay:
     def __init__(self, spec, std: dict, style: dict, layout, rect):
         self.spec, self.std, self.style, self.layout = spec, std, style, layout
@@ -206,6 +265,8 @@ class Overlay:
         self.blockers: list = []       # куски линий и контуров без заливки: их обходят подписи подложки
         self.placed: list = []         # подписи
         self.unplaced: list[str] = []
+        self.legend_box = None         # плашка легенды внутри карты (x0, y0, x1, y1) или None
+        self.corner = "bottom_right"   # угол линейки и севера
 
     # Слои данных
 
@@ -312,11 +373,13 @@ class Overlay:
             width += 2 * inside["padding"]
             x0, y0, x1, y1 = element_box(self.layout.itemById("legend"), (width, height))
             layer["legend_at"] = xy((x0, y0))
+            self.legend_box = (x0, y0, x1, y1)
             self.obstacles.append(box(x0, y0, x1, y1))
         return layer
 
-    def scale_bar_layer(self) -> dict:
-        """Линейка: at — левый конец линии; плашка — по точке элемента scalebar компоновки (map.yaml: scale_bar)."""
+    def scale_bar_layer(self, layers: list[dict]) -> dict:
+        """Линейка: at — левый конец линии; плашка — по точке элемента scalebar компоновки (правый нижний угол), угол —
+        по choose_corner (map.yaml: scale_bar.position) с препятствиями из слоев данных `layers` и легенды внутри."""
         rule = self.std["scale_bar"]
         step = nice_step(self.spec.scale, rule["segment_width"])
         segments = [i * step for i in range(rule["segments"] + 1)]
@@ -328,7 +391,8 @@ class Overlay:
         pad = rule["plate_padding"]
         width = first[0] / 2 + segment * rule["segments"] + last[0] / 2 + 2 * pad
         height = 2 * pad + last[1] + rule["label_gap"] + rule["tick_height"] + rule["line"]["width"]
-        x0, y0, x1, y1 = element_box(self.layout.itemById("scalebar"), (width, height))
+        right = element_box(self.layout.itemById("scalebar"), (width, height))
+        self.corner, (x0, y0, x1, y1) = choose_corner(self.std, self.spec.size_mm[0], right, layers, self.legend_box)
         self.obstacles.append(box(x0, y0, x1, y1))
         at = (x0 + pad + first[0] / 2, y1 - pad - rule["line"]["width"] / 2)
         return {"id": "scale_bar", "role": "scale_bar", "kind": "scalebar",
@@ -336,8 +400,10 @@ class Overlay:
                 "scalebar": {"at": xy(at), "segments_m": segments, "segment_mm": mm(segment)}}
 
     def north_layer(self) -> dict:
-        """Стрелка севера: at — правый нижний угол знака размера map.yaml: north_arrow.size (overlay 1.1.0)."""
-        x0, y0, x1, y1 = element_box(self.layout.itemById("north"), self.std["north_arrow"]["size"])
+        """Стрелка севера: at — правый нижний угол знака размера map.yaml: north_arrow.size (overlay 1.1.0); над
+        линейкой, край по краю ее плашки в том же углу (в левом — зеркально элементу north компоновки)."""
+        box_ = element_box(self.layout.itemById("north"), self.std["north_arrow"]["size"])
+        x0, y0, x1, y1 = mirror(box_, self.spec.size_mm[0]) if self.corner == "bottom_left" else box_
         self.obstacles.append(box(x0, y0, x1, y1))
         return {"id": "north_arrow", "role": "north_arrow", "kind": "north", "source_label": "север вверху",
                 "features": [{"id": "north_arrow", "at": xy((x1, y1))}]}
@@ -444,8 +510,8 @@ def build(spec, std: dict, style: dict, drawn: list, legend_items: list, entries
     data = [d for d in drawn if d.role.level != "basemap"]
     o = Overlay(spec, std, style, layout, rect)
     layers = o.data_layers(data, entries, cut)
-    service = [o.scale_bar_layer()] + ([o.north_layer()] if north else [])
     legend = o.legend_layer(legend_items, entries)
+    service = [o.scale_bar_layer(layers)] + ([o.north_layer()] if north else [])
     blockers = [b.bounds for b in o.blockers + [x for x in o.obstacles if x.geom_type == "Polygon"]]
     o.obstacles += [box(*r) for r in raster(sorted(blockers))]
     labels = o.label_layers(data, entries)

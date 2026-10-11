@@ -487,3 +487,40 @@ def test_legend_groups_from_nine_rows(project):
     assert [(r["role"], r["text"]) for r in groups] == [(k, std["levels"][k]["title"]) for k in ("analysis", "boundaries")]
     assert len(rows) - len(groups) == 11 and rows[0]["kind"] == "group"
     assert [r["category"] for r in rows if r["role"] == "zoning"] == ["Ж", "ОЖ", "ОД", "П", "ИТ", "Р", "СН"]
+
+
+# Угол линейки (Д-054, map.yaml: scale_bar.position): правый нижний, при касании данных — левый нижний без легенды внутри.
+
+BAR_RIGHT = (300.0, 190.0, 340.0, 200.0)  # плашка в правом нижнем углу места шириной 345 мм
+BAR_WIDTH = 345.0
+
+
+def ring_layer(role: str, rect: tuple) -> dict:
+    x0, y0, x1, y1 = rect
+    return {"id": role, "role": role, "kind": "polygon",
+            "features": [{"id": "o1", "rings": [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]}]}
+
+
+def test_scale_bar_moves_left_when_contour_touches_right():
+    std = tokens.load("map")
+    reach = ring_layer("reach_walk", (200.0, 100.0, 320.0, 195.0))  # контур изохроны проходит под правой плашкой
+    corner, rect = overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [reach], None)
+    assert corner == "bottom_left" and rect == (5.0, 190.0, 45.0, 200.0)
+    filled = ring_layer("green", (200.0, 100.0, 320.0, 195.0))
+    assert overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [filled], None)[0] == "bottom_right"  # край заливки — не препятствие
+
+
+def test_scale_bar_stays_right_with_legend_inside():
+    std = tokens.load("map")
+    legend = (14.0, 150.0, 80.0, 198.0)
+    assert overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [], legend) == ("bottom_right", BAR_RIGHT)
+
+
+def test_scale_bar_both_corners_busy_is_error():
+    std = tokens.load("map")
+    reach = ring_layer("reach_walk", (200.0, 100.0, 320.0, 195.0))
+    with pytest.raises(ValueError, match="сдвинуть охват"):
+        overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [reach], (14.0, 150.0, 80.0, 198.0))
+    point = {"id": "stop", "role": "stop", "kind": "point", "features": [{"id": "s1", "at": [20.0, 195.0]}]}
+    with pytest.raises(ValueError, match="левый нижний угол — stop:s1"):
+        overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [reach, point], None)
