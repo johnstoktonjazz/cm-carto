@@ -1,4 +1,56 @@
 - kind: calc
+  subject: buffers:coastal-strip-water-osm-r5486417, площадь пересечения, слой parcels
+  value: 0.0
+  unit: га
+  status: check
+  inputs:
+  - '['
+  - '"'
+  - N
+  - O
+  - R
+  - M
+  - '-'
+  - '9'
+  - '0'
+  - '0'
+  - '0'
+  - '8'
+  - '"'
+  - ']'
+  formula: сумма площадей пересечения зоны с объектами слоя parcels, м2 / 10000; нет; зона buffers:coastal-strip-water-osm-r5486417;
+    слой parcels
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 20 м по NORM-90008, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  subject: buffers:coastal-strip-water-osm-r5486417, число объектов, слой parcels
+  value: 0
+  unit: шт.
+  status: check
+  inputs:
+  - '['
+  - '"'
+  - N
+  - O
+  - R
+  - M
+  - '-'
+  - '9'
+  - '0'
+  - '0'
+  - '0'
+  - '8'
+  - '"'
+  - ']'
+  formula: 'число объектов слоя parcels: точки внутри зоны, площади и линии — пересекающие зону; объекты: нет; зона buffers:coastal-strip-water-osm-r5486417;
+    слой parcels'
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 20 м по NORM-90008, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
   subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, длина в зоне, слой roads
   value: 2.51
   unit: км
