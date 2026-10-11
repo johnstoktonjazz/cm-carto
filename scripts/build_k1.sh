@@ -52,7 +52,7 @@ ids = sorted({i for f in Path("$EX/maps").glob("k1-*.yaml") for i in re.findall(
 part = p.part("analysis-isochrones")
 if part.exists():
     have = sorted(gpkg.read(part)["isochrones"]["object_id"])
-    fresh = gpkg.meta(part)["input_hash"] == gpkg.input_hash(params.RULES, p.crs_name, *data.locate(p, "roads"), have)
+    fresh = gpkg.meta(part)["input_hash"] == isochrone.part_hash(p, have)
     if fresh and set(ids) <= set(have):
         print(part, "— готова:", ", ".join(ids), file=sys.stderr)
         sys.exit()

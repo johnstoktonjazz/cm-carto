@@ -1766,7 +1766,9 @@
    "status": "reference"
   }
  ],
- "fact_ids": [],
+ "fact_ids": [
+  "ASM-9001"
+ ],
  "scalebar": {
   "at_mm": [
    47.66,

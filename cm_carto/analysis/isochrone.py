@@ -162,6 +162,12 @@ def rows(project: Project, origin_id: str, mode: str, minutes: list[float]) -> l
     return out
 
 
+def part_hash(project: Project, object_ids) -> str:
+    """Хэш входов части изохрон: правила, система координат, улицы, состав изохрон. Одно место: им пользуются save
+    и сборка образцов (scripts/build_k1.sh), чтобы понять, свежа ли часть."""
+    return gpkg.input_hash(params_mod.RULES, project.crs_name, *data.locate(project, "roads"), sorted(object_ids))
+
+
 def save(project: Project, new: list[dict]):
     """Часть analysis-isochrones: новые изохроны заменяют прежние с тем же object_id, остальные сохраняются."""
     part = project.part("analysis-isochrones")
@@ -170,6 +176,5 @@ def save(project: Project, new: list[dict]):
         old = gpkg.read(part)["isochrones"]
         items = pd.concat([old[~old["object_id"].isin(items["object_id"])], items], ignore_index=True)
     frame = gpd.GeoDataFrame(items, geometry="geometry", crs=project.crs)
-    digest = gpkg.input_hash(params_mod.RULES, project.crs_name, *data.locate(project, "roads"),
-                             sorted(frame["object_id"]))
-    return gpkg.write(part, {"isochrones": frame}, project.name, project.crs, project.crs_name, digest)
+    return gpkg.write(part, {"isochrones": frame}, project.name, project.crs, project.crs_name,
+                      part_hash(project, frame["object_id"]))
