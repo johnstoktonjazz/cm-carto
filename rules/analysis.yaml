@@ -24,3 +24,87 @@ isochrone:
   quad_segs: 8                   # сегментов на четверть окружности в закруглениях буфера
 labels:
   source: "расчет картографа по графу {roads_label} от {roads_date}, {speed}"
+
+# Буферы (cm-carto buffer). Расстояний здесь нет: правило ссылается на запись NORM реестра проекта
+# (`registry/norms.yaml` от папки анкеты), расстояние берется из ее `value`. `match` подбирает объекты слоя
+# по значению столбца (одно значение или список); без `match` объекты называют явно: `--from <object_id>`.
+# `norm_by_length` — норма по длине объекта: первая полоса, где длина (км) меньше `below_km`; последняя — без границы.
+buffers:
+  quad_segs: 8                   # сегментов на четверть окружности в закруглениях буфера
+  label: "буфер {distance} м по {norm}, от {origin}"
+  rules:
+    szz-boiler:
+      layer: poi_other
+      match: {kind: котельная}
+      kind: санитарно-защитная зона котельной
+      buffer_type: sanitary
+      norm: NORM-90001
+    szz-industry-v:
+      layer: parcels
+      kind: санитарно-защитная зона предприятия класса V
+      buffer_type: sanitary
+      norm: NORM-90002
+    szz-industry-iv:
+      layer: parcels
+      kind: санитарно-защитная зона предприятия класса IV
+      buffer_type: sanitary
+      norm: NORM-90003
+    szz-fuel:
+      layer: poi_other
+      match: {kind: автозаправка}
+      kind: санитарно-защитная зона автозаправки
+      buffer_type: sanitary
+      norm: NORM-90004
+    water-protection-river:
+      layer: water
+      match: {water_class: river}
+      kind: водоохранная зона реки
+      buffer_type: water_protection
+      exclude_source: true
+      norm_by_length:
+        - {norm: NORM-90005, below_km: 10}
+        - {norm: NORM-90006, below_km: 50}
+        - {norm: NORM-90007}
+    water-protection-lake:
+      layer: water
+      match: {water_class: [lake, reservoir]}
+      kind: водоохранная зона озера, водохранилища
+      buffer_type: water_protection
+      exclude_source: true
+      norm: NORM-90013
+    water-protection-sea:
+      layer: water
+      match: {water_class: sea}
+      kind: водоохранная зона моря
+      buffer_type: water_protection
+      exclude_source: true
+      norm: NORM-90012
+    coastal-strip:
+      layer: water
+      match: {water_class: [river, lake, reservoir, sea]}
+      kind: береговая полоса
+      buffer_type: coastal_strip
+      exclude_source: true
+      norm: NORM-90008
+    roadside-express:
+      layer: roads
+      match: {road_class: express}
+      kind: придорожная полоса скоростной дороги
+      buffer_type: roadside
+      norm: NORM-90009
+    roadside-main:
+      layer: roads
+      match: {road_class: main}
+      kind: придорожная полоса магистральной улицы
+      buffer_type: roadside
+      norm: NORM-90010
+    roadside-district:
+      layer: roads
+      match: {road_class: district}
+      kind: придорожная полоса районной улицы
+      buffer_type: roadside
+      norm: NORM-90011
+
+# Подсчеты в зоне (cm-carto count): сколько идентификаторов объектов перечислять в формуле заготовки CALC.
+count:
+  list_limit: 20

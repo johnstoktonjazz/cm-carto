@@ -17,12 +17,12 @@ def locate(project: Project, layer: str) -> list:
     return [f for f in files(project) if layer in set(pyogrio.list_layers(f)[:, 0])]
 
 
-def layer(project: Project, name: str, where: str | None = None) -> gpd.GeoDataFrame:
-    """Слой со всех файлов, где он есть; повтор object_id — ошибка, как при слиянии частей."""
+def layer(project: Project, name: str, where: str | None = None, bbox=None) -> gpd.GeoDataFrame:
+    """Слой со всех файлов, где он есть (where — фильтр OGR по атрибутам, bbox — рамка); повтор object_id — ошибка."""
     found = locate(project, name)
     if not found:
         raise ValueError(f"слоя {name} нет в {[str(f) for f in files(project)]}")
-    frame = pd.concat([pyogrio.read_dataframe(f, layer=name, where=where) for f in found], ignore_index=True)
+    frame = pd.concat([pyogrio.read_dataframe(f, layer=name, where=where, bbox=bbox) for f in found], ignore_index=True)
     repeated = sorted(set(frame["object_id"][frame["object_id"].duplicated()]))
     if repeated:
         raise ValueError(f"слой {name}: object_id повторяется в частях: {repeated[:5]}")

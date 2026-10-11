@@ -3,61 +3,261 @@
   "$id": "cm-carto/analysis-rules",
   "title": "Параметры пространственного анализа (rules/analysis.yaml)",
   "type": "object",
-  "required": ["graph", "modes", "origin", "isochrone", "labels"],
+  "required": [
+    "graph",
+    "modes",
+    "origin",
+    "isochrone",
+    "labels",
+    "buffers",
+    "count"
+  ],
   "additionalProperties": false,
   "properties": {
     "graph": {
       "type": "object",
-      "required": ["snap_tolerance_m"],
+      "required": [
+        "snap_tolerance_m"
+      ],
       "additionalProperties": false,
-      "properties": {"snap_tolerance_m": {"type": "number", "exclusiveMinimum": 0}}
+      "properties": {
+        "snap_tolerance_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
     },
     "modes": {
       "type": "object",
-      "required": ["walk", "drive"],
+      "required": [
+        "walk",
+        "drive"
+      ],
       "additionalProperties": false,
-      "properties": {"walk": {"$ref": "#/$defs/mode"}, "drive": {"$ref": "#/$defs/mode"}}
+      "properties": {
+        "walk": {
+          "$ref": "#/$defs/mode"
+        },
+        "drive": {
+          "$ref": "#/$defs/mode"
+        }
+      }
     },
     "origin": {
       "type": "object",
-      "required": ["point_snap_max_m", "contour_boundary_tolerance_m"],
+      "required": [
+        "point_snap_max_m",
+        "contour_boundary_tolerance_m"
+      ],
       "additionalProperties": false,
       "properties": {
-        "point_snap_max_m": {"type": "number", "exclusiveMinimum": 0},
-        "contour_boundary_tolerance_m": {"type": "number", "exclusiveMinimum": 0}
+        "point_snap_max_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "contour_boundary_tolerance_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
       }
     },
     "isochrone": {
       "type": "object",
-      "required": ["buffer_m", "quad_segs"],
+      "required": [
+        "buffer_m",
+        "quad_segs"
+      ],
       "additionalProperties": false,
       "properties": {
-        "buffer_m": {"type": "number", "exclusiveMinimum": 0},
-        "quad_segs": {"type": "integer", "minimum": 1}
+        "buffer_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "quad_segs": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "labels": {
       "type": "object",
-      "required": ["source"],
+      "required": [
+        "source"
+      ],
       "additionalProperties": false,
-      "properties": {"source": {"type": "string"}}
+      "properties": {
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "buffers": {
+      "type": "object",
+      "required": [
+        "quad_segs",
+        "label",
+        "rules"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "quad_segs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "label": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z0-9-]+$": {
+              "$ref": "#/$defs/buffer_rule"
+            }
+          }
+        }
+      }
+    },
+    "count": {
+      "type": "object",
+      "required": [
+        "list_limit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "list_limit": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   },
   "$defs": {
     "mode": {
       "type": "object",
-      "required": ["speed_kmh", "assumption_id", "kind", "speed_label"],
+      "required": [
+        "speed_kmh",
+        "assumption_id",
+        "kind",
+        "speed_label"
+      ],
       "additionalProperties": false,
       "properties": {
         "speed_kmh": {
           "type": "object",
-          "required": ["express", "main", "district", "local", "pedestrian", "service", "path"],
+          "required": [
+            "express",
+            "main",
+            "district",
+            "local",
+            "pedestrian",
+            "service",
+            "path"
+          ],
           "additionalProperties": false,
-          "patternProperties": {"^(express|main|district|local|pedestrian|service|path)$": {"type": ["number", "null"], "exclusiveMinimum": 0}}
+          "patternProperties": {
+            "^(express|main|district|local|pedestrian|service|path)$": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            }
+          }
         },
-        "assumption_id": {"type": ["string", "null"], "pattern": "^ASM-[0-9]{4}$"},
-        "kind": {"type": "string"},
-        "speed_label": {"type": "string"}
+        "assumption_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^ASM-[0-9]{4}$"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "speed_label": {
+          "type": "string"
+        }
+      }
+    },
+    "buffer_rule": {
+      "type": "object",
+      "required": [
+        "layer",
+        "kind",
+        "buffer_type"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "norm"
+          ]
+        },
+        {
+          "required": [
+            "norm_by_length"
+          ]
+        }
+      ],
+      "properties": {
+        "layer": {
+          "type": "string",
+          "pattern": "^[a-z_]+$"
+        },
+        "match": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            ]
+          }
+        },
+        "kind": {
+          "type": "string"
+        },
+        "buffer_type": {
+          "type": "string"
+        },
+        "exclude_source": {
+          "type": "boolean"
+        },
+        "norm": {
+          "type": "string",
+          "pattern": "^NORM-[0-9]{5}$"
+        },
+        "norm_by_length": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": [
+              "norm"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "norm": {
+                "type": "string",
+                "pattern": "^NORM-[0-9]{5}$"
+              },
+              "below_km": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        }
       }
     }
   }

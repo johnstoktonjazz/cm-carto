@@ -14,6 +14,7 @@ symbol — map.yaml: layers.<роль>.marker.shape; служебные слои
 отступом text.placement.distance от края знака; подпись не задевает другие подписи, подписи подложки, знаки,
 границу территории, линейку, север, легенду внутри и край места. Не встала — отнесена с выноской (leader_to); не встала и так — в лог.
 Размер текста — по метрике шрифта из style.yaml: font.files (кегль text.styles, перенос text.wrap_chars).
+Текст подписи — по TEXT.md верстки (labels.clean, правила rules/labels.yaml).
 """
 
 import json
@@ -27,6 +28,7 @@ from shapely import affinity
 from shapely.geometry import LineString, Point, box
 
 from cm_carto import paths
+from cm_carto.render.labels import clean as clean_label
 
 SIMPLIFY_MM = 0.1
 ROUND_MM = 0.01
@@ -117,7 +119,7 @@ class Measure:
     def wrap(self, text: str) -> str:
         """Перенос по словам, строка не длиннее text.wrap_chars знаков (как autoWrapLength стилей верстки)."""
         limit, lines = self.std["text"]["wrap_chars"], []
-        for word in text.split():
+        for word in text.split(" "):  # неразрывный пробел («№ 20») не делит строку
             if lines and len(lines[-1]) + 1 + len(word) <= limit:
                 lines[-1] += " " + word
             else:
@@ -333,7 +335,7 @@ class Overlay:
                     continue
                 if "min_size" in rule and geom.area < rule["min_size"] ** 2:  # как minFeatureSize QGIS у площадей
                     continue
-                text = self.measure.wrap(str(text))
+                text = self.measure.wrap(clean_label(str(text)))
                 spot = self.place(d, row, text, rule["style"])
                 if spot is None:
                     self.unplaced.append(f"{d.role.key} {row['object_id']} «{text}»")
