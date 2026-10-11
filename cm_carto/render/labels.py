@@ -35,22 +35,23 @@ def _word(text: str) -> str:
 
 
 def quotes(text: str) -> str:
-    """Прямые и английские кавычки → «елочки», вложенные → „лапки“; открывающая — в начале или после пробела,
-    скобки, другой открывающей; закрывающая — иначе."""
+    """Прямые и английские кавычки → «елочки», вложенные → „лапки“. Вне кавычек прямая кавычка открывает; внутри —
+    открывает вложенные, если перед ней пробел (или начало, скобка), а после — буква или цифра, иначе закрывает."""
     out, depth = [], 0
     for i, ch in enumerate(text):
-        if ch in "\"“”„«»":
-            prev = text[i - 1] if i else " "
-            opening = ch in "«„" or (ch in "\"“”" and (prev.isspace() or prev in "([" + OPEN))
-            if ch == "»" or (not opening and depth > 0):
-                depth = max(depth - 1, 0)
-                out.append(CLOSE[min(depth, 1)])
-                continue
-            if opening:
-                out.append(OPEN[min(depth, 1)])
-                depth += 1
-                continue
-        out.append(ch)
+        if ch not in "\"“”„«»":
+            out.append(ch)
+            continue
+        prev = text[i - 1] if i else " "
+        after = text[i + 1] if i + 1 < len(text) else " "
+        opening = ch in "«„" or (ch in "\"“”" and (depth == 0 or ((prev.isspace() or prev in "(["  + OPEN)
+                                                                   and after.isalnum())))
+        if opening:
+            out.append(OPEN[min(depth, 1)])
+            depth += 1
+        else:
+            depth = max(depth - 1, 0)
+            out.append(CLOSE[min(depth, 1)])
     return "".join(out)
 
 

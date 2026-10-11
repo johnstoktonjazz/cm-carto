@@ -8,7 +8,7 @@
 - слой данных: роль → layer; «zoning.Ж» → «zoning:Ж»; polygon (rings: первое — внешнее, остальные — дыры) →
   polygon points_mm/holes_mm; line (path) → polyline; point (at) → point at_mm;
 - подпись (kind label): строка — элемент text (у верстки текст в одну строку: середина строки на at_mm, по
-  горизонтали по anchor l/c/r), положение строк — как расставил картограф; подпись с выноской (leader_to) — callout
+  горизонтали по anchor l/c/r), положение строк — как расставил картограф, нижняя строка — первой (плашки); подпись с выноской (leader_to) — callout
   на слое leader (точка на объекте — at_mm, у конца выноски — первая строка), остальные строки — text на том же
   слое; кегль — style = size_role; подпись зон — слой категории своей зоны;
 - легенда: строки {layer, label}; группы по уровням с 9 строк верстка ставит сама (map.yaml: legend.groups_from);
@@ -111,7 +111,9 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
                                      "at_mm": f["leader_to"], "to_mm": [round(v, 2) for v in to], "text": text,
                                      "anchor": anchor, "style": style_key})
                     rows = rows[1:]
-                for text, x, y, anchor in rows:
+                # Нижняя строка — первой: у каждой строки своя плашка, и плашка верхней строки ложится на поле над
+                # буквами нижней, а не на низ букв верхней (верстка рисует подписи одного слоя в порядке элементов).
+                for text, x, y, anchor in reversed(rows):
                     elements.append({"kind": "text", "id": element_id(f["id"], seen, key), "layer": key,
                                      "at_mm": [round(x, 2), round(y, 2)], "text": text, "anchor": anchor,
                                      "style": style_key})

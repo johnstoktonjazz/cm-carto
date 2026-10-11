@@ -10,9 +10,9 @@ places:
   counts:
     columns: [{title: Объекты}, {title: В 10 мин пешком, numeric: true}, {title: Ближайший, unit: м, numeric: true}]
     rows:
-      - [Школы, {value: "4", unit: "", calc_id: CALC-00001, status: check}, {value: "", unit: м, calc_id: CALC-00004, status: check}]
-      - [Детские сады, {value: "2", unit: "", calc_id: CALC-00002, status: check}, {value: "", unit: м, calc_id: CALC-00005, status: check}]
-      - [Медицинские учреждения, {value: "9", unit: "", calc_id: CALC-00003, status: check}, {value: "", unit: м, calc_id: CALC-00006, status: check}]
+      - [Школы, {value: "4", unit: "", calc_id: CALC-00001, status: check}, {value: "", unit: м, calc_id: CALC-00004}]
+      - [Детские сады, {value: "2", unit: "", calc_id: CALC-00002, status: check}, {value: "", unit: м, calc_id: CALC-00005}]
+      - [Медицинские учреждения, {value: "9", unit: "", calc_id: CALC-00003, status: check}, {value: "", unit: м, calc_id: CALC-00006}]
   legend: {layers_of: image_1}
   method:
     text: "Изохрона: улицы, до которых от границы проекта планировки 10 минут пешком по графу улиц OpenStreetMap
@@ -33,5 +33,5 @@ notes: >
   overlay 1.0.0) — cm-carto render по examples/taganrog/maps/k1-analysis.yaml (место landscape, легенда 123 мм,
   1:11 000); k1-analysis.deck-overlay.json — временный перевод для cm-deck (cm_carto/render/deck_overlay.py), пока
   верстка разбирает свой черновой формат. Счет — число объектов на карте внутри изохроны walk-10 от границы ППТ
-  (analysis-isochrones), status check. Расстояние до ближайшего не считалось — «необходим расчет».
+  (analysis-isochrones), status check. Расстояние до ближайшего не считалось — «необходим расчет», значения нет (без status).
   CALC-00001…00006 и ASM-0001 — условные идентификаторы: базы знаний у полигона нет.

@@ -217,7 +217,9 @@ def provenance(spec: Spec, std: dict, style: dict, basemap: list[Drawn]) -> dict
         doc["title"] = spec.title
     doc |= {"source": "; ".join(all_sources), "date": max(entry["date"] for entry in layers), "status": status,
             "size_mm": {"width": spec.size_mm[0], "height": spec.size_mm[1]}, "dpi": std["export"]["dpi"],
-            "crs": spec.project.crs_name, "scale": f"1:{overlay.number(spec.scale, style)}", "layers": layers}
+            "crs": spec.project.crs_name, "scale": f"1:{spec.scale}", "layers": layers}  # image 1.1.0: ^1:[0-9]+$
+    if "overlay_file" in image_schema()["properties"]:  # image 1.1.0: ссылка подложки на overlay.json рядом
+        doc["overlay_file"] = spec.overlay_out.name
     if spec.fact_ids:
         doc["fact_ids"] = spec.fact_ids
     errors = [e.message for e in jsonschema.Draft202012Validator(image_schema()).iter_errors(doc)]

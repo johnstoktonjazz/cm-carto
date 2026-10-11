@@ -100,25 +100,31 @@ def layer(doc: dict, layer_id: str) -> dict:
 
 
 def test_basemap_png_matches_place_and_has_no_data(project):
-    """Подложка — в размер места, без привязки и метаданных; слои данных на ней не нарисованы (нет цвета accent
-    границы территории), а в превью overlay граница есть."""
+    """Подложка — в размер места, без привязки и метаданных; слои данных на ней не нарисованы: в точке контура
+    территории (overlay) на подложке нет цвета границы, а в превью overlay он есть (граница — цвет text, К-05 верстки,
+    поэтому по цвету всей картинки не отличить: подписи подложки того же цвета)."""
     build.render(describe(project), preview=True)
     width, height = tokens.place_size_mm("square_small")
     image = Image.open(project / "maps" / "map.png")
     assert abs(image.width - width / 25.4 * 300) <= 1
     assert abs(image.height - height / 25.4 * 300) <= 1
     assert "dpi" in image.info and set(image.info) <= {"dpi"}
-    accent = tuple(int(tokens.load("style")["colors"]["accent"][i:i + 2], 16) for i in (0, 2, 4))
-    assert accent not in {c for _, c in image.convert("RGB").getcolors(1 << 24)}
+    std, style = tokens.load("map"), tokens.load("style")
+    name = std["layers"]["territory"]["stroke"]["color"]
+    hexa = std["palette"].get(name) or style["colors"][name]
+    color = tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
+    x, y = layer(side(project, "map", ".overlay.json"), "territory")["features"][0]["rings"][0][0]
+    pixel = (round(x / 25.4 * 300), round(y / 25.4 * 300))
     preview = Image.open(project / "maps" / "map.preview.png").convert("RGB")
-    assert accent in {c for _, c in preview.getcolors(1 << 24)}
+    assert image.convert("RGB").getpixel(pixel) != color
+    assert preview.getpixel(pixel) == color
 
 
 def test_provenance_describes_basemap(project):
     build.render(describe(project))
     doc = side(project, "map", ".provenance.json")
     jsonschema.Draft202012Validator(json.loads(paths.schema("image").read_text(encoding="utf-8"))).validate(doc)
-    assert doc["scale"] == "1:10 000" and doc["status"] == "official" and doc["date"] == "2021-06-01"
+    assert doc["scale"] == "1:10000" and doc["status"] == "official" and doc["date"] == "2021-06-01"
     assert [entry["name"] for entry in doc["layers"]] == ["Кварталы"]
     assert "legend_file" not in doc
 
@@ -162,7 +168,7 @@ def test_where_and_labels_follow_rules(project, capsys):
     doc = side(project, "map", ".overlay.json")
     assert [f["id"] for f in layer(doc, "point_1")["features"]] == ["poi_education:s1", "poi_education:s2"]
     labels = layer(doc, "labels_point_1")["features"]
-    assert [f["text"] for f in labels] == ["Школа 1", "Школа 2"] and {f["size_role"] for f in labels} == {"label"}
+    assert [f["text"] for f in labels] == ["Школа №\u00a01", "Школа №\u00a02"] and {f["size_role"] for f in labels} == {"label"}
     assert "labels_point_3" not in [item["id"] for item in doc["layers"]]
     measure = overlay.Measure(tokens.load("map"), tokens.load("style"))
     boxes = [overlay.text_box(f["at"], f["anchor"], measure.size(f["text"], f["size_role"]), (0, 0)) for f in labels]
@@ -249,7 +255,7 @@ def test_extent_fits_scale_and_inside_legend(project):
     spec |= {"place": "landscape", "legend": "inside", "extent": [X - 600, Y - 600, X + 600, Y + 600]}
     (project / "extent.yaml").write_text(yaml.safe_dump(spec, allow_unicode=True), encoding="utf-8")
     build.render(project / "extent.yaml")
-    assert side(project, "extent", ".provenance.json")["scale"] == "1:6 400"  # 1200 м на 187,68 мм — 1:6394, вверх
+    assert side(project, "extent", ".provenance.json")["scale"] == "1:6400"  # 1200 м на 187,68 мм — 1:6394, вверх
     legend = layer(side(project, "extent", ".overlay.json"), "legend")
     x, y = legend["legend_at"]
     assert 0 < x < 251.88 and 0 < y < 187.68
