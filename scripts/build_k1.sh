@@ -40,7 +40,7 @@ echo "== изохроны из описаний карт"
 # Изохроны, которые карты называют (within, center, extent, where по object_id). Часть готова, если в ней все они и
 # ее input_hash совпадает с пересчетом по тем же входам, что пишет isochrone.save (правила, система координат,
 # файлы со слоем roads, object_id).
-"$RUN" python - <<PY | while read -r origin mode minutes; do "$RUN" cm-carto isochrone "$EX/project.yaml" --from "$origin" --mode "$mode" --minutes $minutes; done
+"$RUN" python - <<PY | while read -r origin mode minutes; do "$RUN" cm-carto isochrone "$EX/project.yaml" --from "$origin" --mode "$mode" --minutes $minutes </dev/null; done
 import re
 import sys
 from collections import defaultdict

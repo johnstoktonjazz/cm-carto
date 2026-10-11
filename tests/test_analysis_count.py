@@ -123,7 +123,7 @@ def test_list_is_cut_at_the_limit(tmp_path, monkeypatch):
     changed = json.loads(json.dumps(params.load()))
     changed["count"]["list_limit"] = 1
     monkeypatch.setattr(params, "load", lambda: changed)
-    assert "и еще 1" in count.drafts(project, ZONE, "parcels")[0]["formula"]
+    assert "и еще 1" in count.drafts(project, ZONE, "poi_other")[0]["formula"]
 
 
 def test_cli_count(tmp_path):
