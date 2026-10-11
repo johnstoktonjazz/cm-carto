@@ -67,7 +67,7 @@ def _feature(row: dict, attrs: dict) -> dict:
 def _present(value) -> bool:
     if isinstance(value, list):
         return True
-    return value is not None and not (isinstance(value, float) and pd.isna(value))
+    return not pd.isna(value)
 
 
 def dump(frames: dict[str, gpd.GeoDataFrame], project_name: str, crs_name: str, input_hash: str) -> dict:
@@ -120,6 +120,11 @@ def write(path: Path, frames: dict[str, gpd.GeoDataFrame], project_name: str, cr
         kind, attrs = layers()[name]
         frame = frame.copy()
         frame["geometry"] = frame.geometry.apply(lambda g: _multi(g, kind))
+        # Целые атрибуты с пропусками приходят вещественными (5.0): в файл — целыми по типу схемы.
+        # Дробное значение в целом поле — ошибка приведения, а не тихое округление.
+        for column, spec in attrs.items():
+            if spec.get("type") == "integer" and column in frame:
+                frame[column] = frame[column].astype("Int64")
         prepared[name] = frame.sort_values("object_id", kind="stable").reset_index(drop=True)
     errors = validate(dump(prepared, project_name, crs_name, input_hash))
     if errors:

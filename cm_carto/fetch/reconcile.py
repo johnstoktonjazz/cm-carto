@@ -12,7 +12,7 @@ import geopandas as gpd
 import pandas as pd
 import yaml
 
-from cm_carto.fetch import common, registries
+from cm_carto.fetch import common, osm, overture, registries
 from cm_carto.fetch.common import rules
 from cm_carto.project import Project
 
@@ -20,8 +20,8 @@ POI_REGISTRIES = ["bus_gov", "hotels"]
 
 
 def tokens(name: str | None) -> set[str]:
-    """Различающие слова названия: нижний регистр, без ё, без родовых слов; цифры остаются."""
-    words = re.findall(r"[a-zа-я]+|\d+", (name or "").lower().replace("ё", "е"))
+    """Различающие слова названия: нижний регистр, "е с двумя точками" как "е", без родовых слов; цифры остаются."""
+    words = re.findall(r"[a-zа-я]+|\d+", (name or "").lower().replace("\u0451", "е"))
     return {w for w in words if w not in set(rules()["reconcile"]["noise_words"])}
 
 
@@ -103,8 +103,6 @@ def apply(frames: dict[str, gpd.GeoDataFrame], institutions: dict[str, list[dict
 def run(project: Project, base: str) -> Path:
     """cm-carto fetch <project.yaml> reconcile --base overture|osm: слои базы заново из кеша, сверка со всеми
     реестрами учреждений, лежащими в кеше, и перезапись части fetch-<base>.gpkg; отчет — рядом, .yaml."""
-    from cm_carto.fetch import osm, overture
-
     loaded = [r for r in POI_REGISTRIES if (registries.cache_dir(project, r) / "SOURCE.yaml").exists()]
     if not loaded:
         raise ValueError("в кеше нет выгрузок bus_gov и hotels: сначала cm-carto fetch <project.yaml> bus_gov --file ...")

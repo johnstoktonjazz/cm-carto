@@ -69,3 +69,15 @@ def test_custom_transverse_mercator(tmp_path):
     out = gpkg.write(tmp_path / "m.gpkg", frames, doc["project"], msk, "МСК синтетическая", doc["input_hash"])
     assert gpkg.check(out) == []
     assert CRS(gpkg.read(out)["blocks"].crs) == msk
+
+
+def test_integer_attrs_with_gaps_are_written_as_integers(tmp_path):
+    """floors с пропуском приходит вещественным (5.0, NaN): в файле целое и пусто (отчет fetch-dev)."""
+    doc, frames = example_frames()
+    poi = frames["poi_education"]
+    frames["poi_education"] = gpd.GeoDataFrame(
+        gpd.pd.concat([poi, poi.assign(object_id="poi_education:osm-n1", capacity=float("nan"))]), crs=poi.crs)
+    frames["poi_education"]["capacity"] = frames["poi_education"]["capacity"].astype(float)
+    out = write(tmp_path / "i.gpkg", frames, doc)
+    info = gpkg.pyogrio.read_info(out, layer="poi_education")
+    assert dict(zip(info["fields"], info["dtypes"]))["capacity"].startswith("int")

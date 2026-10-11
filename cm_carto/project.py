@@ -8,6 +8,9 @@
       definition: EPSG:32637      # что понимает PROJ: EPSG-код, строка PROJ или WKT (для МСК — параметры)
     extent_wgs84: [xmin, ymin, xmax, ymax]   # охват выгрузок внешних источников, градусы
     geo: 00_База_знаний/geo                   # папка геоданных проекта от папки анкеты
+    inputs: 01_Исходные                       # образцы и кеш внешних источников от папки анкеты
+    fetch:
+      overture_release: 2026-09-23.0          # выпуск Overture Maps для fetch overture
 """
 
 from dataclasses import dataclass

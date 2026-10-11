@@ -61,28 +61,30 @@
       "stage": 2,
       "title": "fetch Overture (OSM): улицы, ж/д, остановки, застройка, зелень, вода, учреждения",
       "agent": "fetch-dev",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T2.2",
       "stage": 2,
       "title": "fetch OSM напрямую (Overpass, Geofabrik) для Mac",
       "agent": "fetch-dev",
-      "status": "todo"
+      "status": "done",
+      "note": "проверено только на синтетике: хосты закрыты из облака; живая проверка — на Mac"
     },
     {
       "id": "T2.3",
       "stage": 2,
       "title": "подключения реестров (bus.gov.ru, ОКН, гостиницы, ДТП, Росстат, НСПД), ПОДКЛЮЧЕНИЯ.md",
       "agent": "fetch-dev",
-      "status": "todo"
+      "status": "done",
+      "note": "проверено только на синтетике: хосты закрыты из облака; живая проверка — на Mac"
     },
     {
       "id": "T2.4",
       "stage": 2,
       "title": "сверка объектов между источниками",
       "agent": "fetch-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T2.1"
       ]
