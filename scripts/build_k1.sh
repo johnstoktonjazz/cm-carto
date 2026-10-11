@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
-# Контрольная точка К1 на полигоне: части геопакета → project.gpkg → три карты (четыре файла: сравнение — две карты)
-# в новом виде — подложка PNG + provenance (контракт image) + overlay.json (контракт overlay) + превью для проверки.
+# Контрольная точка К1 на полигоне, полный путь: части геопакета → project.gpkg → четыре карты (подложка PNG +
+# provenance по контракту image + overlay.json по контракту overlay + превью) → временный перевод overlay для cm-deck →
+# три листа cm-deck → линтер верстки → рендер PNG/PDF → контактный лист.
 # Запуск из любого места: scripts/build_k1.sh
 #
-# Сборка листов cm-deck (build, lint, render, review из копии верстки в _build/cm-design, заход 2) снята до поддержки
-# overlay в cm-deck; как ее вернуть — reports/agents/render-dev.md, «Заход 2».
+# Верстка (cm-design, CM_DESIGN) только читается: ее пакеты cm_deck, qa, review работают из зеркала
+# _build/cm-design (копия нужных папок), потому что cm-deck пишет кеш в _build/ своего корня. Зависимости cm-deck
+# (python-pptx) — в окружении картографа; LibreOffice (soffice) и pdftoppm — системные.
+# Контракты для рендера и линтера (K02) — CM_CONTRACTS или подмодуль cm-contracts.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DESIGN="${CM_DESIGN:-$ROOT/../cm-design}"
 RUN="$ROOT/scripts/run.sh"
 EX="$ROOT/examples/taganrog"
+OUT="$ROOT/_build/k1"
+MIRROR="$ROOT/_build/cm-design"
 cd "$ROOT"
+export CM_CONTRACTS="${CM_CONTRACTS:-$ROOT/cm-contracts}"
 
 ls "$EX"/geo/parts/fetch-overture.gpkg "$EX"/geo/parts/ingest-*.gpkg >/dev/null
 
@@ -19,7 +26,7 @@ ls "$EX"/geo/parts/fetch-overture.gpkg "$EX"/geo/parts/ingest-*.gpkg >/dev/null
 # в image: status добавлен reference, больше ничего. Такие образцы в альбом не идут.
 if [ "${K1_TRIAL_IMAGE:-0}" = 1 ]; then
   TRIAL="$ROOT/_build/contracts-image-reference"
-  rm -rf "$TRIAL" && mkdir -p "$TRIAL" && cp -r "$ROOT/cm-contracts/contracts" "$TRIAL/"
+  rm -rf "$TRIAL" && mkdir -p "$TRIAL" && cp -r "$CM_CONTRACTS/contracts" "$TRIAL/"
   "$RUN" python - "$TRIAL/contracts/image/schema.json" <<'PY'
 import json, sys
 path = sys.argv[1]
@@ -56,6 +63,30 @@ for name in ("k1-analysis", "k1-zoning", "k1-compare-a", "k1-compare-b"):
         print(path.relative_to(Path("$ROOT")))
 PY
 
-# Листы cm-deck — когда верстка научится ставить overlay.json (контракт overlay 1.0.0): сейчас cm-deck вставляет
-# картинку целиком, а легенда, подписи и линейка теперь в overlay. Описания листов — examples/taganrog/sheets/.
-echo "К1: карты и превью — $EX/maps/images/"
+# ВРЕМЕННО, до перехода cm-deck на контракт overlay: перевод в черновой формат cm_deck/overlay.py;
+# удалить вместе с cm_carto/render/deck_overlay.py.
+echo "== перевод overlay для cm-deck (временно)"
+"$RUN" python -m cm_carto.render.deck_overlay "$EX"/maps/images/k1-*.overlay.json
+
+echo "== зеркало верстки"
+rm -rf "$MIRROR" && mkdir -p "$MIRROR/input"
+for d in cm_deck qa review tokens schema template design input/fonts; do
+  cp -a "$DESIGN/$d" "$MIRROR/$d"
+done
+find "$MIRROR" -name __pycache__ -prune -exec rm -rf {} +
+cp "$DESIGN/pyproject.toml" "$MIRROR/"
+DECK=(env PYTHONPATH="$MIRROR" "$RUN" python -m cm_deck.cli)
+
+echo "== листы"
+mkdir -p "$OUT"
+"${DECK[@]}" build "$EX/sheets" -o "$OUT/k1.pptx"
+echo "== линтер верстки (CM_CONTRACTS=$CM_CONTRACTS)"
+# Ошибки линтера не останавливают рендер и контактный лист (они показывают ошибки на листах); код выхода — в конце.
+lint=0
+"${DECK[@]}" lint "$OUT/k1.pptx" --slides "$EX/sheets" -o "$OUT/lint.json" || lint=$?
+echo "== рендер листов"
+"${DECK[@]}" render "$OUT/k1.pptx" -o "$OUT/render"
+echo "== контактный лист"
+"${DECK[@]}" review "$OUT/k1.pptx" "$OUT/render" -o "$OUT/review/index.html" --lint "$OUT/lint.json"
+echo "К1: карты $EX/maps/images/; листы $OUT/k1.pptx, $OUT/render/, $OUT/review/index.html; линтер: $([ $lint = 0 ] && echo 0 ошибок || echo есть ошибки, $OUT/lint.json)"
+exit $lint

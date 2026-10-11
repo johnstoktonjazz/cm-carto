@@ -57,8 +57,8 @@
   },
   {
    "features": [
-    {"anchor": "ne", "at": [33.25, 66.54], "id": "poi_education:osm-w126696975", "size_role": "label", "text": "Детский сад №52"},
-    {"anchor": "ne", "at": [39.79, 71.89], "id": "poi_education:osm-w126696976", "size_role": "label", "text": "Детский сад №93"}
+    {"anchor": "ne", "at": [33.25, 66.54], "id": "poi_education:osm-w126696975", "size_role": "label", "text": "Детский сад № 52"},
+    {"anchor": "ne", "at": [39.79, 71.89], "id": "poi_education:osm-w126696976", "size_role": "label", "text": "Детский сад № 93"}
    ],
    "id": "labels_point_2",
    "kind": "label",

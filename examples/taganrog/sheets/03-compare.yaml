@@ -1,41 +1,46 @@
 id: K1-03
 layout: compare
 places:
-  title: Школы и сады у территории по двум источникам
-  subtitle: Один охват и масштаб; совпадения объектов — после сверки источников
-  legend: {file: ../maps/images/k1-compare-a-legend.svg, kind: легенда, source: QGIS}
+  title: У Таганрога-Пассажирского в 15 минутах пешком больше школ, чем у Таганрога-II
+  subtitle: Один масштаб и одна легенда; счет — объекты внутри изохроны от станции
+  legend: {layers_of: image_1}
   image_1:
     file: ../maps/images/k1-compare-a.png
+    overlay: ../maps/images/k1-compare-a.deck-overlay.json
     kind: карта
-    source: OpenStreetMap; проект планировки, синтетический образец
-    date: "10.2026"
-    caption: По OpenStreetMap
+    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0
+    date: "09.2026"
+    caption: От станции Таганрог-II
   image_2:
     file: ../maps/images/k1-compare-b.png
+    overlay: ../maps/images/k1-compare-b.deck-overlay.json
     kind: карта
-    source: Overture Places; проект планировки, синтетический образец
-    date: "10.2026"
-    caption: По Overture Places
+    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0
+    date: "09.2026"
+    caption: От станции Таганрог-Пассажирский
   table_1:
     columns:
       - {title: Показатель}
-      - {title: OpenStreetMap, numeric: true}
-      - {title: Overture Places, numeric: true}
+      - {title: Таганрог-II, numeric: true}
+      - {title: Таганрог-Пассажирский, numeric: true}
     rows:
-      - - Школы в охвате карты
-        - {value: "", unit: "", calc_id: CALC-00011, status: check}
-        - {value: "", unit: "", calc_id: CALC-00012, status: check}
-      - - Детские сады в охвате карты
-        - {value: "", unit: "", calc_id: CALC-00013, status: check}
-        - {value: "", unit: "", calc_id: CALC-00014, status: check}
-      - - Есть в обоих источниках
-        - {value: "", unit: "", calc_id: CALC-00015, status: check}
-        - {value: "", unit: "", calc_id: CALC-00016, status: check}
+      - - Школы в 15 минутах пешком
+        - {value: "2", unit: "", calc_id: CALC-00011, status: check}
+        - {value: "7", unit: "", calc_id: CALC-00012, status: check}
+      - - Детские сады в 15 минутах пешком
+        - {value: "0", unit: "", calc_id: CALC-00013, status: check}
+        - {value: "2", unit: "", calc_id: CALC-00014, status: check}
+      - - Площадь изохроны 15 минут
+        - {value: "229,75", unit: га, calc_id: CALC-00015, status: check}
+        - {value: "282,49", unit: га, calc_id: CALC-00016, status: check}
+      - - Улицы в изохроне 15 минут
+        - {value: "38,09", unit: км, calc_id: CALC-00017, status: check}
+        - {value: "58,95", unit: км, calc_id: CALC-00018, status: check}
 sources:
-  - "Overture Maps, выпуск 2026-09-23.0: учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0), улицы, железная дорога, вода, озеленение, кварталы"
-  - "Проект планировки, чертеж красных линий: синтетический образец картографа, 10.2026"
+  - "Overture Maps, выпуск 2026-09-23.0: улицы, железная дорога, станции, учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0)"
 notes: >
-  Образец К1, карта 3: сравнение двух карт одного охвата и масштаба (1:20 000, место square_small) с одной легендой
-  91 мм (легенда карты 3a; легенды обеих карт совпадают байт в байт). cm-carto render по
-  examples/taganrog/maps/k1-compare-a.yaml и k1-compare-b.yaml. Счет — заготовки CALC сверки источников (T2.4):
-  до расчета «необходим расчет». После этапа анализа варианты сравнения — изохроны 5 и 10 минут пешком.
+  Образец К1, карта 3: сравнение двух карт одного масштаба (1:30 000, место square_small) с одной легендой
+  (compare_with, легенды двух overlay совпадают). cm-carto render по examples/taganrog/maps/k1-compare-a.yaml
+  и k1-compare-b.yaml; *.deck-overlay.json — временный перевод overlay.json для cm-deck. Счет школ и садов —
+  объекты на карте внутри изохроны walk-15 от станции; площадь и длина улиц — analysis-isochrones.calc.yaml
+  (status check). CALC-00011…00018 — условные идентификаторы: базы знаний у полигона нет.

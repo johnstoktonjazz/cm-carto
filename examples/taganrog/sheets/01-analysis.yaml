@@ -1,31 +1,37 @@
 id: K1-01
 layout: map_analysis
 places:
-  title: Школы, сады и больницы у территории проекта
-  conclusion:
-    text: "Сколько объектов в 10 минутах пешком и как далеко ближайший — после расчета изохрон по графу улиц"
+  title:
+    text: Школы, сады и медицина в 10 минутах пешком
     fact_ids: [ASM-0001]
+  conclusion:
+    text: "От границы проекта планировки в 10 минутах пешком 4 школы, 2 детских сада и 9 медицинских учреждений"
+    fact_ids: [CALC-00001, CALC-00002, CALC-00003]
   counts:
     columns: [{title: Объекты}, {title: В 10 мин пешком, numeric: true}, {title: Ближайший, unit: м, numeric: true}]
     rows:
-      - [Школы, {value: "", unit: "", calc_id: CALC-00001, status: check}, {value: "", unit: м, calc_id: CALC-00004, status: check}]
-      - [Детские сады, {value: "", unit: "", calc_id: CALC-00002, status: check}, {value: "", unit: м, calc_id: CALC-00005, status: check}]
-      - [Больницы и поликлиники, {value: "", unit: "", calc_id: CALC-00003, status: check}, {value: "", unit: м, calc_id: CALC-00006, status: check}]
-  legend: {file: ../maps/images/k1-analysis-legend.svg, kind: легенда, source: QGIS}
+      - [Школы, {value: "4", unit: "", calc_id: CALC-00001, status: check}, {value: "", unit: м, calc_id: CALC-00004, status: check}]
+      - [Детские сады, {value: "2", unit: "", calc_id: CALC-00002, status: check}, {value: "", unit: м, calc_id: CALC-00005, status: check}]
+      - [Медицинские учреждения, {value: "9", unit: "", calc_id: CALC-00003, status: check}, {value: "", unit: м, calc_id: CALC-00006, status: check}]
+  legend: {layers_of: image_1}
   method:
-    text: "Изохрона: улицы не дальше 800 м от границы по графу улиц OpenStreetMap, 10 минут при 4,8 км/ч. Объекты — OpenStreetMap и Overture Places, выпуск Overture 2026-09-23.0."
+    text: "Изохрона: улицы, до которых от границы проекта планировки 10 минут пешком по графу улиц OpenStreetMap
+      при 4,8 км/ч. Объекты — OpenStreetMap и Overture Places, выпуск Overture 2026-09-23.0."
     fact_ids: [ASM-0001]
   image_1:
     file: ../maps/images/k1-analysis.png
+    overlay: ../maps/images/k1-analysis.deck-overlay.json
     kind: карта
-    source: OpenStreetMap и Overture Places; проект планировки, синтетический образец
-    date: "10.2026"
-    caption: Объекты счета вокруг границы; остановки — для ориентира
+    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0
+    date: "09.2026"
+    caption: Объекты счета внутри изохроны
 sources:
-  - "Overture Maps, выпуск 2026-09-23.0: улицы, железная дорога, вода, озеленение, кварталы, остановки, учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0)"
+  - "Overture Maps, выпуск 2026-09-23.0: улицы, железная дорога, вода, озеленение, кварталы, учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0)"
   - "Проект планировки, чертеж красных линий: синтетический образец картографа, 10.2026"
 notes: >
-  Образец К1, карта 1 (паспорт картографа, этап 3): аналитическая карта на полигоне. Карта и легенда — cm-carto render
-  по examples/taganrog/maps/k1-analysis.yaml (место landscape, легенда 123 мм, масштаб 1:10 000), provenance рядом
-  с картой. Счет и расстояния — заготовки CALC этапа анализа (T4.1, T4.2): до расчета «необходим расчет», status check.
+  Образец К1, карта 1: аналитическая карта на полигоне (Таганрог). Подложка, provenance и overlay.json (контракт
+  overlay 1.0.0) — cm-carto render по examples/taganrog/maps/k1-analysis.yaml (место landscape, легенда 123 мм,
+  1:11 000); k1-analysis.deck-overlay.json — временный перевод для cm-deck (cm_carto/render/deck_overlay.py), пока
+  верстка разбирает свой черновой формат. Счет — число объектов на карте внутри изохроны walk-10 от границы ППТ
+  (analysis-isochrones), status check. Расстояние до ближайшего не считалось — «необходим расчет».
   CALC-00001…00006 и ASM-0001 — условные идентификаторы: базы знаний у полигона нет.

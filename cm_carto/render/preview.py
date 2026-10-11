@@ -118,7 +118,10 @@ def role_style(std: dict, role: str) -> tuple[dict, str | None]:
     """Стиль роли overlay: (слой map.yaml, заливка категории); «zoning.<категория>» — категория зон ПЗЗ."""
     if role.startswith("zoning."):
         category = std["zoning"]["categories"][role.split(".", 1)[1]]
-        return {"geometry": "polygon", "stroke": std["zoning"]["stroke"]}, category["fill"]
+        layer = {"geometry": "polygon"}  # зоны без обводки (MAPS.md, ответ 36); обводка — если стандарт ее задаст
+        if "stroke" in std["zoning"]:
+            layer["stroke"] = std["zoning"]["stroke"]
+        return layer, category["fill"]
     return spec_file.role_spec(std, role), None
 
 

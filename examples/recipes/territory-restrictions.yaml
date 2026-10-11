@@ -1,0 +1,23 @@
+# Рецепт «ограничения территории»: санитарно-защитные и водоохранные зоны поверх границы проекта планировки.
+# Шаблон без проектных значений: <…> заменить именем правила из rules/analysis.yaml (buffers.rules) и ключами object_id; копия кладется в maps/ проекта.
+# Размер зоны — запись NORM реестра проекта, в карту и описание числа не пишутся.
+#   1. cm-carto buffer project.yaml --rule <ПРАВИЛО_СЗЗ>
+#      cm-carto buffer project.yaml --rule <ПРАВИЛО_ВОДООХРАННОЙ_ЗОНЫ>
+#   2. cm-carto count project.yaml --zone buffers:<КЛЮЧ_БУФЕРА> --layer parcels      (участки в зоне, площадь пересечения)
+#   3. cm-carto render territory-restrictions.yaml --preview
+place: square_large
+project: ../project.yaml
+extent: boundary_planning:<КЛЮЧ_ГРАНИЦЫ>
+legend: inside
+layers:
+  zone_sanitary: {layer: buffers, where: "buffer_type = 'sanitary'", title: Санитарно-защитная зона}
+  zone_water_protection: {layer: buffers, where: "buffer_type = 'water_protection'", title: Водоохранная зона}
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Ограничения территории проекта планировки
+out: images/territory-restrictions.png

@@ -18,7 +18,6 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from osgeo import gdal  # noqa: E402
 from qgis.core import (  # noqa: E402
     Qgis,
-    QgsApplication,
     QgsCoordinateReferenceSystem,
     QgsFeature,
     QgsGeometry,
@@ -33,6 +32,7 @@ from qgis.PyQt.QtGui import QFontDatabase, QImage  # noqa: E402
 from qgis.PyQt.QtXml import QDomDocument  # noqa: E402
 
 from cm_carto import paths, tokens  # noqa: E402
+from cm_carto.render import build  # noqa: E402
 
 PLACE = "thumb"
 CRS = "EPSG:3395"  # мировая Меркатора: любая метрическая, пробный рендер не привязан ни к одному проекту
@@ -122,14 +122,12 @@ def run(folder: Path | None = None) -> list[str]:
     errors = []
     if Qgis.versionInt() < MIN_QGIS:
         errors.append(f"QGIS {Qgis.version()}, нужен 3.44 или новее")
-    app = QgsApplication([], False)
-    app.initQgis()
+    build.start()  # один QGIS на процесс: тот же, что у рендера (MCP-сервер держит doctor и render в одном процессе)
     errors += check_contracts()
     errors += check_fonts()
     if folder is None:
         folder = Path(tempfile.mkdtemp(prefix="cm-carto-doctor-"))
     folder.mkdir(parents=True, exist_ok=True)
     errors += check_render(folder)
-    app.exitQgis()
     print(f"QGIS {Qgis.version()}; cm-contracts: {paths.contracts()}; cm-design: {paths.design()}; пробная карта: {folder}")
     return errors

@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "cm-carto": {
+      "command": "./scripts/run.sh",
+      "args": ["cm-carto-mcp"],
+      "env": {
+        "CM_CARTO_ENV": "${CM_CARTO_ENV:-/opt/mm/envs/carto}",
+        "MM": "${MM:-/opt/mm/bin/micromamba}",
+        "MAMBA_ROOT_PREFIX": "${MAMBA_ROOT_PREFIX:-/opt/mm/root}",
+        "CM_CARTO_PROJECT": "${CM_CARTO_PROJECT:-examples/taganrog}"
+      }
+    },
+    "qgis": {
+      "command": "uvx",
+      "args": ["--from", "https://github.com/nkarasiak/qgis-mcp/archive/refs/heads/main.zip", "qgis-mcp-server"]
+    }
+  }
+}

@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 
 [project.scripts]
 cm-carto = "cm_carto.cli:main"
+cm-carto-mcp = "cm_carto.mcp.server:main"
 
 [tool.setuptools.packages.find]
 include = ["cm_carto*"]

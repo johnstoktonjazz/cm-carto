@@ -74,8 +74,8 @@
   },
   {
    "features": [
-    {"anchor": "sw", "at": [171.07, 108.13], "id": "poi_education:osm-w386006885", "size_role": "label", "text": "Детский сад №68\n«Светлячок»"},
-    {"anchor": "nw", "at": [111.74, 115.49], "id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "size_role": "label", "text": "МБДОУ д/с 20 \"Красная\nШапочка\""}
+    {"anchor": "sw", "at": [171.07, 108.13], "id": "poi_education:osm-w386006885", "size_role": "label", "text": "Детский сад № 68\n«Светлячок»"},
+    {"anchor": "nw", "at": [111.74, 115.49], "id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "size_role": "label", "text": "Детский сад № 20\n«Красная Шапочка»"}
    ],
    "id": "labels_point_2",
    "kind": "label",
@@ -84,10 +84,10 @@
   },
   {
    "features": [
-    {"anchor": "sw", "at": [83.17, 48.42], "id": "poi_education:osm-w337246600", "size_role": "label", "text": "Средняя школа № 10"},
-    {"anchor": "se", "at": [43.16, 71.94], "id": "poi_education:osm-w363365826", "size_role": "label", "text": "Школа №9"},
-    {"anchor": "sw", "at": [118.16, 53.88], "id": "poi_education:osm-w386512211", "size_role": "label", "text": "Лицей №4"},
-    {"anchor": "sw", "at": [44.41, 41.62], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "size_role": "label", "text": "Гимназия 2 им. Чехова"}
+    {"anchor": "sw", "at": [83.17, 48.42], "id": "poi_education:osm-w337246600", "size_role": "label", "text": "Средняя школа № 10"},
+    {"anchor": "se", "at": [43.16, 71.94], "id": "poi_education:osm-w363365826", "size_role": "label", "text": "Школа № 9"},
+    {"anchor": "sw", "at": [118.16, 53.88], "id": "poi_education:osm-w386512211", "size_role": "label", "text": "Лицей № 4"},
+    {"anchor": "sw", "at": [44.41, 41.62], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "size_role": "label", "text": "Гимназия № 2 имени\nЧехова"}
    ],
    "id": "labels_point_1",
    "kind": "label",

@@ -1,0 +1,24 @@
+# Рецепт «обеспеченность школами и садами»: школы и сады в 10 минутах пешком от границы проекта планировки.
+# Шаблон без проектных значений: <КЛЮЧ_…> заменить ключом object_id из геопакета проекта; копия кладется в maps/ проекта.
+#   1. cm-carto isochrone project.yaml --from boundary_planning:<КЛЮЧ_ГРАНИЦЫ> --mode walk --minutes 10
+#   2. cm-carto count project.yaml --zone isochrones:<КЛЮЧ_ИЗОХРОНЫ_10> --layer poi_education --where "poi_type = 'school'"
+#      cm-carto count project.yaml --zone isochrones:<КЛЮЧ_ИЗОХРОНЫ_10> --layer poi_education --where "poi_type = 'kindergarten'"
+#   3. cm-carto render school-kindergarten-provision.yaml --preview
+# Число на карте и в таблице счета берется из реестра; результат count — заготовка CALC со статусом check.
+place: landscape
+project: ../project.yaml
+extent: isochrones:<КЛЮЧ_ИЗОХРОНЫ_10>
+legend: 123
+layers:
+  point_1: {layer: poi_education, where: "poi_type = 'school'", within: isochrones:<КЛЮЧ_ИЗОХРОНЫ_10>, title: Школы}
+  point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", within: isochrones:<КЛЮЧ_ИЗОХРОНЫ_10>, title: Детские сады}
+  reach_walk: {layer: isochrones, where: "object_id = 'isochrones:<КЛЮЧ_ИЗОХРОНЫ_10>'", title: 10 минут пешком от границы проекта планировки}
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Школы и детские сады в 10 минутах пешком от территории проекта планировки
+out: images/school-kindergarten-provision.png

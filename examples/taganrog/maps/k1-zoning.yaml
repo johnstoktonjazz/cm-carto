@@ -1,8 +1,8 @@
-# К1, карта 2: карта зонирования на весь лист под макет image_full (место sheet, легенда внутри).
-# Центр сдвинут на северо-запад от территории: угол заголовка (map.yaml: places.sheet.clear) остается городу.
-place: sheet
+# К1, карта 2: карта зонирования — главная карта раздела под макет image_page (место wide, легенда внутри; макет
+# image_full и место sheet у слайдов верстка сняла, К-02, Д-048). Центр — центр охвата границы проекта планировки.
+place: wide
 project: ../project.yaml
-center: [494650, 5228850]
+center: boundary_planning:ga9cdffac6b20
 scale: 5000
 legend: inside
 layers:

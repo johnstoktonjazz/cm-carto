@@ -1,0 +1,24 @@
+# Рецепт «транспортная доступность»: 5, 10, 15 минут пешком от остановки, школы и сады внутри изохроны.
+# Шаблон без проектных значений: <КЛЮЧ_…> заменить ключом object_id из геопакета проекта; копия кладется в maps/ проекта (слой и ключ, например transit_stops:…).
+#   1. cm-carto isochrone project.yaml --from transit_stops:<КЛЮЧ_ОСТАНОВКИ> --mode walk --minutes 5 10 15
+#   2. cm-carto measure project.yaml isochrones:<КЛЮЧ_ИЗОХРОНЫ_15>        (площадь и длина сети → заготовки CALC)
+#   3. cm-carto render transport-access.yaml --preview
+# Одно место, один охват: для вариантов (пешком и на автомобиле) — две карты с compare_with (MAPS_USAGE.md, раздел 5).
+place: landscape
+project: ../project.yaml
+extent: isochrones:<КЛЮЧ_ИЗОХРОНЫ_15>
+legend: 123
+layers:
+  point_1: {layer: poi_education, where: "poi_type = 'school'", within: isochrones:<КЛЮЧ_ИЗОХРОНЫ_15>, title: Школы}
+  point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", within: isochrones:<КЛЮЧ_ИЗОХРОНЫ_15>, title: Детские сады}
+  reach_walk: {layer: isochrones, where: "object_id = 'isochrones:<КЛЮЧ_ИЗОХРОНЫ_15>'", title: 15 минут пешком}
+  stop: {layer: transit_stops, where: "object_id = 'transit_stops:<КЛЮЧ_ОСТАНОВКИ>'", title: Остановка}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Доступность остановки за 15 минут пешком
+out: images/transport-access.png
