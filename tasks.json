@@ -34,14 +34,14 @@
       "stage": 1,
       "title": "синтетические DXF ППТ и КПТ на полигоне",
       "agent": "ingest-dev",
-      "status": "todo"
+      "status": "done"
     },
     {
       "id": "T1.2",
       "stage": 1,
       "title": "ingest DXF по правилам раскладки, починка контуров, отчет импорта",
       "agent": "ingest-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T1.1"
       ]
@@ -51,7 +51,7 @@
       "stage": 1,
       "title": "ingest КПТ и выписок ЕГРН (XML)",
       "agent": "ingest-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T1.1"
       ]

@@ -25,7 +25,7 @@ cm-carto/scripts/setup_env.sh            # micromamba, QGIS 3.44 и геосте
 | Команда | Что делает | Состояние |
 |---|---|---|
 | `cm-carto doctor` | QGIS без окна, шрифты из токенов, контракты и стили верстки, пробная карта и повтор байт в байт | готово |
-| `cm-carto ingest` | DXF, КПТ, SHP, GPKG → часть геопакета и отчет импорта | этап 1 |
+| `cm-carto ingest <project.yaml> <файл или папка>` | DXF, КПТ, SHP, GPKG → часть геопакета и отчет импорта; рядом с DXF, SHP, GPKG — паспорт `<файл>.source.yaml` (правила, подпись, дата, лицензия) | готово |
 | `cm-carto fetch` | внешние источники → часть геопакета и кеш с датой и лицензией | этап 2 |
 | `cm-carto render` | карта по описанию (`schema/map.schema.json`): PNG в размер места, легенда SVG, `provenance.json` по контракту `image`, кеш | готово |
 | `cm-carto isochrone`, `measure` | изохроны, буферы, измерения как заготовки `CALC` | этап 4 |

@@ -151,12 +151,12 @@ def polygons_from(paths: list[list[tuple[float, float]]], tolerance: float, laye
         polygons += list(polygonize(unary_union(segments)))
     result = []
     for poly in polygons:
-        if poly.area == 0:
-            report.unrecognized.append(f"слой «{layer}»: контур нулевой площади {at(poly.centroid.x, poly.centroid.y)}")
-            continue
         fixed, changed = geomlib.fix_polygon(poly)
+        center = poly.envelope.centroid
+        if fixed.is_empty or fixed.area == 0:
+            report.unrecognized.append(f"слой «{layer}»: контур нулевой площади {at(center.x, center.y)}")
+            continue
         if changed:
-            center = poly.envelope.centroid
             report.fixed.append(f"слой «{layer}»: самопересечение исправлено {at(center.x, center.y)}, "
                                 f"частей: {len(geomlib.polygons_of(fixed))}")
             report.confirm.append(f"слой «{layer}»: контур {at(center.x, center.y)} изменен при исправлении самопересечения, сверить с чертежом")
@@ -167,7 +167,8 @@ def polygons_from(paths: list[list[tuple[float, float]]], tolerance: float, laye
 def lines_from(paths: list[list[tuple[float, float]]], tolerance: float, layer: str, report: Report) -> list[LineString]:
     segments, bridges, _ = close_gaps([LineString(c) for c in paths], tolerance)
     report_bridges(bridges, layer, report)
-    merged = linemerge(unary_union(segments))
+    union = unary_union(segments)
+    merged = linemerge(union) if union.geom_type == "MultiLineString" else union
     return list(getattr(merged, "geoms", [merged]))
 
 

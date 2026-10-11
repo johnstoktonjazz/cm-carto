@@ -320,6 +320,10 @@ def make_dxf(blocks, rnd) -> Path:
 
     path = OUT / "dxf" / "ppt-sample.dxf"
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Классы ezdxf собирает из множества типов сущностей: порядок обхода множества строк меняется от запуска
+    # к запуску (рандомизация хэшей Python). Классы добавляются заранее и сортируются — файл тот же байт в байт.
+    doc.classes.add_required_classes(doc.dxfversion)
+    doc.classes.classes = dict(sorted(doc.classes.classes.items()))
     doc.saveas(path)
     (OUT / "dxf" / "ppt-sample.dxf.source.yaml").write_text(yaml.safe_dump({
         "rules": "ppt",
