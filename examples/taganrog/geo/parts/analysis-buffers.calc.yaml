@@ -1,4 +1,34 @@
 - kind: calc
+  subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, длина в зоне, слой roads
+  value: 2.51
+  unit: км
+  status: check
+  inputs:
+  - '['
+  - '"'
+  - N
+  - O
+  - R
+  - M
+  - '-'
+  - '9'
+  - '0'
+  - '0'
+  - '0'
+  - '3'
+  - '"'
+  - ']'
+  formula: сумма длин частей объектов слоя roads внутри зоны, м / 1000; зона buffers:szz-industry-iv-parcels-00-00-0000000-7;
+    слой roads
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 100 м по NORM-90003, от КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные
+      вымышлены, выгрузка 2026-10-11
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
   subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, площадь пересечения, слой blocks, отбор «kind = 'квартал ППТ'»
   value: 4.08
   unit: га
@@ -125,4 +155,67 @@
     doc_status: reference
   - doc_id: geopackage:ingest-kpt-sample:parcels
     label: слой parcels, КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены, выгрузка 2026-10-11
+    doc_status: reference
+- kind: calc
+  subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, число объектов, слой poi_other
+  value: 2
+  unit: шт.
+  status: check
+  inputs:
+  - '['
+  - '"'
+  - N
+  - O
+  - R
+  - M
+  - '-'
+  - '9'
+  - '0'
+  - '0'
+  - '0'
+  - '3'
+  - '"'
+  - ']'
+  formula: 'число объектов слоя poi_other: точки внутри зоны, площади и линии — пересекающие зону; объекты: poi_other:ovt-12cc0c2c-9bb8-49ab-aba6-adcf5f22600f,
+    poi_other:ovt-b13d784a-175c-4306-9058-e1ef8aaf2d94; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой poi_other'
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 100 м по NORM-90003, от КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные
+      вымышлены, выгрузка 2026-10-11
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:poi_other
+    label: слой poi_other, Overture Maps Places 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, число объектов, слой roads
+  value: 55
+  unit: шт.
+  status: check
+  inputs:
+  - '['
+  - '"'
+  - N
+  - O
+  - R
+  - M
+  - '-'
+  - '9'
+  - '0'
+  - '0'
+  - '0'
+  - '3'
+  - '"'
+  - ']'
+  formula: 'число объектов слоя roads: точки внутри зоны, площади и линии — пересекающие зону; объекты: roads:osm-w136694714,
+    roads:osm-w1519884019, roads:osm-w1519884020, roads:osm-w1519884021, roads:osm-w1519884326, roads:osm-w1519884329, roads:osm-w1519884330,
+    roads:osm-w1519884331, roads:osm-w1519884332, roads:osm-w1519884333, roads:osm-w1519884334, roads:osm-w1519884335, roads:osm-w1519884336,
+    roads:osm-w1519884337, roads:osm-w1519884338, roads:osm-w1519884339, roads:osm-w1519884340, roads:osm-w1519884342, roads:osm-w1519884386,
+    roads:osm-w1519884387 и еще 35; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой roads'
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 100 м по NORM-90003, от КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные
+      вымышлены, выгрузка 2026-10-11
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference
