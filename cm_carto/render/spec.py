@@ -64,8 +64,12 @@ class Spec:
     out: Path
 
     @property
-    def legend_out(self) -> Path:
-        return self.out.with_name(self.out.stem + "-legend.svg")
+    def overlay_out(self) -> Path:
+        return self.out.with_name(self.out.stem + ".overlay.json")
+
+    @property
+    def preview_out(self) -> Path:
+        return self.out.with_name(self.out.stem + ".preview.png")
 
     @property
     def provenance_out(self) -> Path:

@@ -43,9 +43,9 @@ def drafts(project: Project, object_id: str) -> list[dict]:
     base = {"kind": "calc", "status": "check", "inputs": inputs}
     area_m2, length_m = iso.geometry.area, reach.length_m
     return [
-        {**base, "subject": f"{object_id}, площадь", "value": round(area_m2 / 1e4, 2), "unit": "га",
+        {**base, "subject": f"{object_id}, площадь", "value": float(round(area_m2 / 1e4, 2)), "unit": "га",
          "formula": f"площадь полигона изохроны, м2 / 10000; {method}", "sources": sources},
-        {**base, "subject": f"{object_id}, длина достижимой сети", "value": round(length_m / 1000, 2), "unit": "км",
+        {**base, "subject": f"{object_id}, длина достижимой сети", "value": float(round(length_m / 1000, 2)), "unit": "км",
          "formula": f"сумма длин частей отрезков слоя roads, достижимых за {iso['minutes']:g} мин, м / 1000; {method}",
          "sources": sources},
     ]
