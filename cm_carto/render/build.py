@@ -316,15 +316,42 @@ def frame(spec: Spec) -> QgsRectangle:
     return QgsRectangle(cx - half_w, cy - half_h, cx + half_w, cy + half_h)
 
 
-def legend(spec: Spec, std: dict, drawn: list[Drawn]) -> list[tuple[Role, dict, list[tuple[str, str]]]]:
-    """Строки легенды: роли уровней с legend: true, нарисованные на этой карте или на соседней карте сравнения
-    (compare_with), в порядке стандарта; у ролей с категориями — категории, встреченные на картах группы, в порядке
-    стиля. У соседей — тот же отбор по их охвату, без отрисовки. Строки у карт группы одни и те же."""
-    shown = [d for d in drawn if std["levels"][d.role.level]["legend"]]
+def neighbours(spec: Spec, std: dict) -> list[tuple[Spec, Drawn]]:
+    """Роли уровней с legend: true, найденные на соседних картах сравнения (compare_with): тот же отбор по их охвату,
+    без отрисовки. Пары (карта, роль) в порядке карт группы и стандарта."""
+    out = []
     for other in spec.group:
         rect = frame(other)
         found = [vector(other, std, role, rect) for role in other.roles if std["levels"][role.level]["legend"]]
-        shown += [d for d in found if d.rows]
+        out += [(other, d) for d in found if d.rows]
+    return out
+
+
+def group_entries(spec: Spec, drawn: list[Drawn], others: list[tuple[Spec, Drawn]]) -> dict:
+    """Слои данных карты (layer_entry). У роли, найденной и на соседях по сравнению, источник — объединение
+    источников роли по картам группы в порядке путей карт, затем объектов: строки у карт группы одни и те же
+    (К-026: одна легенда на группу — и один перечень источников)."""
+    entries = {}
+    for d in drawn:
+        if d.role.level == "basemap":
+            continue
+        entry = layer_entry(d)
+        same = [(s, o) for s, o in others if o.role.key == d.role.key]
+        if same:
+            found = []
+            for _, o in sorted([(spec, d), *same], key=lambda pair: str(pair[0].path.resolve())):
+                found += [text for text in sources(o.rows) if text not in found]
+            entry["source"] = "; ".join(found)
+        entries[d.role.key] = entry
+    return entries
+
+
+def legend(spec: Spec, std: dict, drawn: list[Drawn], others: list[tuple[Spec, Drawn]]
+           ) -> list[tuple[Role, dict, list[tuple[str, str]]]]:
+    """Строки легенды: роли уровней с legend: true, нарисованные на этой карте или на соседней карте сравнения
+    (compare_with, others — из neighbours), в порядке стандарта; у ролей с категориями — категории, встреченные на
+    картах группы, в порядке стиля. Строки у карт группы одни и те же."""
+    shown = [d for d in drawn if std["levels"][d.role.level]["legend"]] + [d for _, d in others]
     rows = []
     for role in spec.roles:
         mine = [d for d in shown if d.role.key == role.key]
@@ -382,10 +409,11 @@ def draw(spec: Spec, folder: Path) -> None:
     doc = provenance(spec, std, style, basemap)
     (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
                                                    encoding="utf-8")
-    entries = {d.role.key: layer_entry(d) for d in drawn if d.role.level != "basemap"}
+    others = neighbours(spec, std)
+    entries = group_entries(spec, drawn, others)
     bounds = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-    data, unplaced = overlay.build(spec, std, style, drawn, legend(spec, std, drawn), entries, north, layout, bounds,
-                                   spec.out.name, raster, street_cut(std, drawn))
+    data, unplaced = overlay.build(spec, std, style, drawn, legend(spec, std, drawn, others), entries, north, layout,
+                                   bounds, spec.out.name, raster, street_cut(std, drawn))
     for text in unplaced:
         print(f"{spec.path.name}: подпись не встала без наездов: {text}")
     (folder / spec.overlay_out.name).write_text(overlay.dumps(data), encoding="utf-8")
