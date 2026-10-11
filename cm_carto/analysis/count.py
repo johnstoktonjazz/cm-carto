@@ -7,6 +7,7 @@
 """
 
 import copy
+import json
 
 import yaml
 
@@ -70,7 +71,7 @@ def drafts(project: Project, zone_id: str, layer: str, where: str | None = None)
     sources = source_list(project, zone, frame, set(ids), layer)
     scope = f"слой {layer}" + (f", отбор «{where}»" if where else "")
     listed = ", ".join(ids[:limit]) + (f" и еще {len(ids) - limit}" if len(ids) > limit else "") if ids else "нет"
-    inputs = list(zone["fact_ids"]) if "fact_ids" in zone and zone["fact_ids"] is not None else []
+    inputs = json.loads(zone["fact_ids"])
 
     def draft(what: str, value: float, unit: str, formula: str) -> dict:
         return {"kind": "calc", "subject": f"{zone_id}, {what}, {scope}", "value": value, "unit": unit,

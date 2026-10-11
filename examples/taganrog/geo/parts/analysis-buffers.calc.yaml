@@ -1,75 +1,10 @@
 - kind: calc
-  subject: buffers:coastal-strip-water-osm-r5486417, площадь пересечения, слой parcels
-  value: 0.0
-  unit: га
-  status: check
-  inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '8'
-  - '"'
-  - ']'
-  formula: сумма площадей пересечения зоны с объектами слоя parcels, м2 / 10000; нет; зона buffers:coastal-strip-water-osm-r5486417;
-    слой parcels
-  sources:
-  - doc_id: geopackage:analysis-buffers:buffers
-    label: слой buffers, буфер 20 м по NORM-90008, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
-    doc_status: reference
-- kind: calc
-  subject: buffers:coastal-strip-water-osm-r5486417, число объектов, слой parcels
-  value: 0
-  unit: шт.
-  status: check
-  inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '8'
-  - '"'
-  - ']'
-  formula: 'число объектов слоя parcels: точки внутри зоны, площади и линии — пересекающие зону; объекты: нет; зона buffers:coastal-strip-water-osm-r5486417;
-    слой parcels'
-  sources:
-  - doc_id: geopackage:analysis-buffers:buffers
-    label: слой buffers, буфер 20 м по NORM-90008, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
-    doc_status: reference
-- kind: calc
   subject: buffers:szz-industry-iv-parcels-00-00-0000000-7, длина в зоне, слой roads
   value: 2.51
   unit: км
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: сумма длин частей объектов слоя roads внутри зоны, м / 1000; зона buffers:szz-industry-iv-parcels-00-00-0000000-7;
     слой roads
   sources:
@@ -86,20 +21,7 @@
   unit: га
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: сумма площадей пересечения зоны с объектами слоя blocks, м2 / 10000; blocks:10 0.74 га, blocks:14 1.29 га, blocks:15
     1.48 га, blocks:9 0.57 га; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой blocks, отбор «kind = 'квартал ППТ'»
   sources:
@@ -119,20 +41,7 @@
   unit: га
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: сумма площадей пересечения зоны с объектами слоя parcels, м2 / 10000; parcels:00-00-0000000-12 0.52 га, parcels:00-00-0000000-13
     1.24 га, parcels:00-00-0000000-14 0.27 га, parcels:00-00-0000000-4 0.70 га, parcels:00-00-0000000-6 1.23 га, parcels:00-00-0000000-7
     1.38 га; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой parcels
@@ -150,20 +59,7 @@
   unit: шт.
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: 'число объектов слоя blocks: точки внутри зоны, площади и линии — пересекающие зону; объекты: blocks:10, blocks:14,
     blocks:15, blocks:9; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой blocks, отбор «kind = ''квартал ППТ''»'
   sources:
@@ -183,20 +79,7 @@
   unit: шт.
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: 'число объектов слоя parcels: точки внутри зоны, площади и линии — пересекающие зону; объекты: parcels:00-00-0000000-12,
     parcels:00-00-0000000-13, parcels:00-00-0000000-14, parcels:00-00-0000000-4, parcels:00-00-0000000-6, parcels:00-00-0000000-7;
     зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой parcels'
@@ -214,20 +97,7 @@
   unit: шт.
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: 'число объектов слоя poi_other: точки внутри зоны, площади и линии — пересекающие зону; объекты: poi_other:ovt-12cc0c2c-9bb8-49ab-aba6-adcf5f22600f,
     poi_other:ovt-b13d784a-175c-4306-9058-e1ef8aaf2d94; зона buffers:szz-industry-iv-parcels-00-00-0000000-7; слой poi_other'
   sources:
@@ -244,20 +114,7 @@
   unit: шт.
   status: check
   inputs:
-  - '['
-  - '"'
-  - N
-  - O
-  - R
-  - M
-  - '-'
-  - '9'
-  - '0'
-  - '0'
-  - '0'
-  - '3'
-  - '"'
-  - ']'
+  - NORM-90003
   formula: 'число объектов слоя roads: точки внутри зоны, площади и линии — пересекающие зону; объекты: roads:osm-w136694714,
     roads:osm-w1519884019, roads:osm-w1519884020, roads:osm-w1519884021, roads:osm-w1519884326, roads:osm-w1519884329, roads:osm-w1519884330,
     roads:osm-w1519884331, roads:osm-w1519884332, roads:osm-w1519884333, roads:osm-w1519884334, roads:osm-w1519884335, roads:osm-w1519884336,
@@ -270,4 +127,30 @@
     doc_status: reference
   - doc_id: geopackage:fetch-overture:roads
     label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  subject: buffers:water-protection-river-water-osm-w390570032, площадь пересечения, слой parcels
+  value: 0.0
+  unit: га
+  status: check
+  inputs:
+  - NORM-90005
+  formula: сумма площадей пересечения зоны с объектами слоя parcels, м2 / 10000; нет; зона buffers:water-protection-river-water-osm-w390570032;
+    слой parcels
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 50 м по NORM-90005, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  subject: buffers:water-protection-river-water-osm-w390570032, число объектов, слой parcels
+  value: 0
+  unit: шт.
+  status: check
+  inputs:
+  - NORM-90005
+  formula: 'число объектов слоя parcels: точки внутри зоны, площади и линии — пересекающие зону; объекты: нет; зона buffers:water-protection-river-water-osm-w390570032;
+    слой parcels'
+  sources:
+  - doc_id: geopackage:analysis-buffers:buffers
+    label: слой buffers, буфер 50 м по NORM-90005, от OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
     doc_status: reference

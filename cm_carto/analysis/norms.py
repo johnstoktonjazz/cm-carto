@@ -6,6 +6,7 @@
 """
 
 import json
+import math
 from pathlib import Path
 
 import jsonschema
@@ -60,7 +61,7 @@ def length_km(geom) -> float:
     if geom.geom_type in ("LineString", "MultiLineString"):
         return geom.length / 1000
     rect = geom.minimum_rotated_rectangle.exterior.coords
-    sides = [((rect[i][0] - rect[i + 1][0]) ** 2 + (rect[i][1] - rect[i + 1][1]) ** 2) ** 0.5 for i in range(2)]
+    sides = [math.hypot(rect[i][0] - rect[i + 1][0], rect[i][1] - rect[i + 1][1]) for i in range(2)]
     return max(sides) / 1000
 
 
