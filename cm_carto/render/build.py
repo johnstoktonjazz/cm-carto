@@ -3,12 +3,12 @@
 
 - <out>.png — подложка: роли уровня basemap (map.yaml) со своими подписями, компоновка design/qgis/map_<место>.qpt
   верстки без линейки, севера и легенды, в размер места, 300 dpi; <out>.provenance.json по контракту image;
-- <out>.overlay.json — остальное в мм места (overlay.py): объекты, подписи, легенда, линейка, север.
+- <out>.overlay.json — остальное по контракту overlay (overlay.py): объекты, подписи, легенда, линейка, север.
 
-Если роль данных стоит в порядке стандарта между ролями подложки (зоны ПЗЗ над застройкой, под улицами), подложка
-делится по порядку: нижняя часть — <out>.png, верхние — <out>-2.png … с прозрачным фоном; порядок — overlay: stack.
+Overlay лежит поверх всей подложки: зоны ПЗЗ, которые по стандарту стоят под улицами (zoning.above), закрывают улицы
+внутри зон — в overlay 1.0.0 нет места слою между частями подложки (вопрос к контракту, доклад render-dev).
 Стили ролей — design/qgis/<роль>.qml без правок (К-004). Слой роли — слой геопакета с отбором where и объектами,
-пересекающими охват карты. Кеш — по хэшу описания, анкеты, геопакета, стилей и токенов верстки и кода рендера.
+пересекающими охват карты. Кеш — по хэшу описания, анкеты, геопакета, стилей и токенов верстки, контрактов и кода.
 """
 
 import atexit
@@ -40,15 +40,16 @@ from qgis.core import (  # noqa: E402
     QgsApplication,
     QgsCategorizedSymbolRenderer,
     QgsCoordinateReferenceSystem,
-    QgsFillSymbol,
     QgsFeatureRequest,
     QgsLayoutExporter,
+    QgsMapRendererSequentialJob,
     QgsPrintLayout,
     QgsProject,
     QgsReadWriteContext,
     QgsRectangle,
     QgsVectorLayer,
 )
+from qgis.PyQt.QtCore import QSizeF  # noqa: E402
 from qgis.PyQt.QtXml import QDomDocument  # noqa: E402
 
 from cm_carto import paths, tokens  # noqa: E402
@@ -56,8 +57,7 @@ from cm_carto.render import overlay, preview as preview_file, spec as spec_file 
 from cm_carto.render.spec import Role, Spec  # noqa: E402
 
 CACHE = paths.ROOT / "_build" / "cache"
-CODE = [*sorted(Path(__file__).parent.glob("*.py")), Path(__file__).with_name("print.yaml"), spec_file.SCHEMA,
-        overlay.SCHEMA]
+CODE = [*sorted(Path(__file__).parent.glob("*.py")), Path(__file__).with_name("print.yaml"), spec_file.SCHEMA]
 SOURCE_FIELDS = ["status", "source_label", "source_license", "source_date"]
 # Статусы геометрии от надежного к слабому: сводный статус карты и слоя — самый слабый из встреченных.
 STATUSES = ["official", "cadastral", "concept", "digitized", "reference"]
@@ -177,36 +177,47 @@ def sources(rows: list[dict]) -> list[str]:
     return out
 
 
-def map_status(spec: Spec, std: dict, drawn: list[Drawn]) -> str:
-    """Сводный статус карты целиком (подложка и overlay): самый слабый среди ролей легенды, кроме reference."""
-    statuses = [weakest(row["status"] for row in d.rows) for d in drawn if std["levels"][d.role.level]["legend"]]
-    subject = [s for s in statuses if s != "reference"]
-    if not subject:
-        raise ValueError(f"{spec.path}: статус карты не выражается контрактом image: слои легенды только reference, "
-                         f"а в image: status нет reference (вопрос верстке, доклад render-dev)")
-    return weakest(subject)
-
-
 def layer_entry(d: Drawn) -> dict:
     """Слой на карте: строка легенды, источники, самый слабый статус и самая поздняя дата объектов в охвате."""
     return {"name": d.role.title, "source": "; ".join(sources(d.rows)),
             "status": weakest(row["status"] for row in d.rows), "date": max(row["source_date"] for row in d.rows)}
 
 
-def provenance(spec: Spec, std: dict, style: dict, drawn: list[Drawn]) -> dict:
-    """Описание подложки по контракту image: слои, источник и дата — только подложки; статус — карты целиком."""
-    basemap = [d for d in drawn if d.role.level == "basemap"]
+def basemap_labels(item, rect: QgsRectangle, spec: Spec, dpi: int) -> list[tuple[float, float, float, float]]:
+    """Рамки подписей подложки (улицы, вода, зелень) в мм места: тот же движок подписей QGIS с теми же настройками
+    карты, что у экспорта; подписи overlay их не задевают."""
+    size = QSizeF(spec.size_mm[0] / 25.4 * dpi, spec.size_mm[1] / 25.4 * dpi)
+    job = QgsMapRendererSequentialJob(item.mapSettings(rect, size, dpi, True))
+    job.start()
+    job.waitForFinished()
+    k = 1000 / spec.scale
+    out = []
+    for label in job.takeLabelingResults().allLabels():
+        if label.isUnplaced:
+            continue
+        r = label.labelGeometry.boundingBox() if hasattr(label, "labelGeometry") else label.labelRect
+        out.append(((r.xMinimum() - rect.xMinimum()) * k, (rect.yMaximum() - r.yMaximum()) * k,
+                    (r.xMaximum() - rect.xMinimum()) * k, (rect.yMaximum() - r.yMinimum()) * k))
+    return sorted(out)
+
+
+def provenance(spec: Spec, std: dict, style: dict, basemap: list[Drawn]) -> dict:
+    """Описание подложки по контракту image: слои, источник, дата и статус — только подложки. Статус — самый слабый
+    из слоев подложки; reference в image: status нет — тогда ошибка (вопрос к контракту, доклад render-dev)."""
     layers = [layer_entry(d) for d in basemap]
     all_sources = []
     for d in basemap:
         all_sources += [s for s in sources(d.rows) if s not in all_sources]
-    scale = overlay.number(spec.scale, style)
+    status = weakest(entry["status"] for entry in layers)
+    if status not in image_schema()["properties"]["status"]["enum"]:
+        raise ValueError(f"{spec.path}: статус подложки {status}, в контракте image: status его нет — provenance "
+                         f"не выпускается (в подложке: {', '.join(e['name'] for e in layers if e['status'] == status)})")
     doc = {"file": spec.out.name, "kind": "map"}
     if spec.title:
         doc["title"] = spec.title
-    doc |= {"source": "; ".join(all_sources), "date": max(entry["date"] for entry in layers),
-            "status": map_status(spec, std, drawn), "size_mm": {"width": spec.size_mm[0], "height": spec.size_mm[1]},
-            "dpi": std["export"]["dpi"], "crs": spec.project.crs_name, "scale": f"1:{scale}", "layers": layers}
+    doc |= {"source": "; ".join(all_sources), "date": max(entry["date"] for entry in layers), "status": status,
+            "size_mm": {"width": spec.size_mm[0], "height": spec.size_mm[1]}, "dpi": std["export"]["dpi"],
+            "crs": spec.project.crs_name, "scale": f"1:{overlay.number(spec.scale, style)}", "layers": layers}
     if spec.fact_ids:
         doc["fact_ids"] = spec.fact_ids
     errors = [e.message for e in jsonschema.Draft202012Validator(image_schema()).iter_errors(doc)]
@@ -220,27 +231,8 @@ def image_schema() -> dict:
     return json.loads(paths.schema("image").read_text(encoding="utf-8"))
 
 
-def stack(drawn: list[Drawn], spec: Spec) -> tuple[list[list[Drawn]], list[dict]]:
-    """Стопка снизу вверх: подряд идущие в порядке стандарта роли подложки — одна картинка, роли данных — overlay."""
-    runs, items = [], []
-    for d in reversed(drawn):
-        kind = "basemap" if d.role.level == "basemap" else "overlay"
-        if items and items[-1]["kind"] == kind:
-            items[-1]["roles"].append(d.role.key)
-            if kind == "basemap":
-                runs[-1].append(d)
-        else:
-            items.append({"kind": kind, "roles": [d.role.key]})
-            if kind == "basemap":
-                runs.append([d])
-    names = [spec.out.name] + [f"{spec.out.stem}-{k}.png" for k in range(2, len(runs) + 1)]
-    for item in (i for i in items if i["kind"] == "basemap"):
-        item["file"] = names.pop(0)
-    return runs, items
-
-
 def draw(spec: Spec, folder: Path) -> None:
-    """Рендер в папку кеша: подложка PNG, provenance, overlay.json."""
+    """Рендер в папку кеша: подложка PNG, provenance подложки, overlay.json."""
     start()
     std, style = tokens.load("map"), tokens.load("style")
     project = QgsProject.instance()
@@ -260,40 +252,32 @@ def draw(spec: Spec, folder: Path) -> None:
         if d.rows:
             drawn.append(d)
             project.addMapLayer(d.layer, False)
-    if not drawn:
-        raise ValueError(f"{spec.path}: в охвате нет объектов ни одной роли")
     check_print(spec, drawn)
-    north = not any(d.role.level == "basemap" for d in drawn)
+    basemap = [d for d in drawn if d.role.level == "basemap"]
+    if not basemap:  # MAPS.md, раздел 7 допускает карту без подложки, контракт overlay — нет (basemap обязателен)
+        raise ValueError(f"{spec.path}: в охвате нет подложки, а overlay 1.0.0 требует basemap (вопрос к контракту)")
+    north = False  # подложка есть, север вверху: стрелки нет (MAPS.md, раздел 7)
     if spec.north is not None and spec.north != north:
         raise ValueError(f"{spec.path}: north: {spec.north}, по правилу MAPS.md, раздел 7 — {north} "
-                         f"(север вверху; подложка в охвате {'есть' if not north else 'нет'})")
+                         f"(север вверху, подложка в охвате есть)")
 
-    runs, items = stack(drawn, spec)
     for element in ("scalebar", "north", "legend"):  # служебные знаки — в overlay
         if layout.itemById(element) is not None:
             layout.itemById(element).setVisibility(False)
+    item.setLayers([d.layer for d in basemap])
     item.setExtent(rect)
-    page = layout.pageCollection().page(0)
-    white = page.pageStyleSymbol().clone()
-    for run, entry in zip(runs, (i for i in items if i["kind"] == "basemap")):
-        item.setLayers([d.layer for d in reversed(run)])
-        # Нижняя часть — на белом листе компоновки; верхние — на прозрачном, поверх слоев overlay.
-        page.setPageStyleSymbol(white if entry["file"] == spec.out.name
-                                else QgsFillSymbol.createSimple({"color": "0,0,0,0", "outline_style": "no"}))
-        layout.refresh()
-        export_png(layout, folder / entry["file"], std["export"]["dpi"])
+    layout.refresh()
+    export_png(layout, folder / spec.out.name, std["export"]["dpi"])
+    doc = provenance(spec, std, style, basemap)
+    (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+                                                   encoding="utf-8")
 
-    basemap = None
-    if runs:  # карта без подложки (MAPS.md, раздел 7: тогда стрелка севера) — только overlay на белом
-        basemap = spec.out.name
-        doc = provenance(spec, std, style, drawn)
-        (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
-                                                       encoding="utf-8")
-    else:
-        map_status(spec, std, drawn)
+    entries = {d.role.key: layer_entry(d) for d in drawn if d.role.level != "basemap"}
     bounds = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-    layers = [{"role": d.role.key} | layer_entry(d) for d in drawn if d.role.level != "basemap"]
-    data = overlay.build(spec, std, style, drawn, items, layers, north, layout, bounds, basemap)
+    obstacles = basemap_labels(item, rect, spec, std["export"]["dpi"])
+    data, unplaced = overlay.build(spec, std, style, drawn, entries, north, layout, bounds, spec.out.name, obstacles)
+    for text in unplaced:
+        print(f"{spec.path.name}: подпись не встала без наездов: {text}")
     (folder / spec.overlay_out.name).write_text(overlay.dumps(data), encoding="utf-8")
     project.clear()
 
@@ -303,7 +287,8 @@ def cache_key(spec: Spec) -> str:
     digest = hashlib.sha256()
     design = [paths.design() / "tokens" / "map.yaml", paths.design() / "tokens" / "style.yaml",
               *sorted(p for p in paths.qgis_styles().iterdir() if p.is_file())]
-    for path in [spec.path, spec.project.root / "project.yaml", spec.data, *design, paths.schema("image"), *CODE]:
+    for path in [spec.path, spec.project.root / "project.yaml", spec.data, *design, paths.schema("image"),
+                 paths.schema("overlay"), *CODE]:
         digest.update(path.name.encode())
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     digest.update(Qgis.version().encode())

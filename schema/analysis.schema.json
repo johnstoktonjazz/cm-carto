@@ -29,12 +29,11 @@
     },
     "isochrone": {
       "type": "object",
-      "required": ["buffer_m", "quad_segs", "simplify_m"],
+      "required": ["buffer_m", "quad_segs"],
       "additionalProperties": false,
       "properties": {
         "buffer_m": {"type": "number", "exclusiveMinimum": 0},
-        "quad_segs": {"type": "integer", "minimum": 1},
-        "simplify_m": {"type": "number", "minimum": 0}
+        "quad_segs": {"type": "integer", "minimum": 1}
       }
     },
     "labels": {

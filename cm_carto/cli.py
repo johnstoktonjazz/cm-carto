@@ -21,12 +21,14 @@ def main(argv=None) -> None:
     p = commands.add_parser("doctor", help="проверка окружения: QGIS без окна, шрифты, контракты, пробный рендер")
     p.add_argument("-o", "--out", type=Path, help="папка для пробной карты")
     p.set_defaults(func=doctor)
+    from cm_carto.analysis import cli as analysis_cli
     from cm_carto.fetch import cli as fetch_cli
     from cm_carto.ingest import cli as ingest_cli
     from cm_carto.render import cli as render_cli
 
     ingest_cli.add_parser(commands)
     fetch_cli.add_parser(commands)
+    analysis_cli.add_parser(commands)
     render_cli.add_parser(commands)
     args = parser.parse_args(argv)
     sys.exit(args.func(args))

@@ -9,3 +9,4 @@ input/**/cache/
 # Части геопакета из внешних источников: воспроизводятся `cm-carto fetch` из закрепленного выпуска (К-014).
 examples/*/geo/parts/fetch-*.gpkg
 examples/*/geo/project.gpkg
+examples/*/geo/parts/analysis-*.gpkg

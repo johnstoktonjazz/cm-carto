@@ -1,39 +1,68 @@
 {
  "basemap": "k1-compare-b.png",
- "crs": "EPSG:32637",
- "extent": [493786.3, 5228011.0, 495613.7, 5229789.0],
- "features": [
-  {"fact_ids": [], "geometry": {"coordinates": [[[56.88, 71.0], [78.55, 58.71], [78.89, 56.83], [58.92, 38.3], [35.78, 51.36], [56.88, 71.0]]], "type": "Polygon"}, "object_id": "boundary_planning:ga9cdffac6b20", "role": "territory", "status": "official"},
-  {"fact_ids": [], "geometry": {"coordinates": [50.94, 70.23], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_2.marker"}, "object_id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "role": "point_2", "status": "reference"},
-  {"fact_ids": [], "geometry": {"coordinates": [13.9, 32.07], "type": "Point"}, "marker": {"shape": "circle", "token": "map.yaml: layers.point_1.marker"}, "object_id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "role": "point_1", "status": "reference"}
- ],
- "format": "cm-carto/overlay-draft/0.1",
- "labels": [
-  {"align": "bottom-left", "anchor": [53.19, 67.98], "object_id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "placement": "around", "role": "point_2", "style": "label", "text": "МБДОУ д/с 20 \"Красная Шапочка\""},
-  {"align": "bottom-left", "anchor": [16.15, 29.82], "object_id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "placement": "around", "role": "point_1", "style": "label", "text": "Гимназия 2 им. Чехова"}
- ],
+ "map": {"crs": "EPSG:32637", "extent": [493786.3, 5228011.0, 495613.7, 5229789.0], "rotation_deg": 0, "scale": 20000},
+ "place": {"name": "square_small", "size_mm": {"height": 88.9, "width": 91.37}},
  "layers": [
-  {"date": "2026-09-23", "name": "Школы", "role": "point_1", "source": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0", "status": "reference"},
-  {"date": "2026-09-23", "name": "Детские сады", "role": "point_2", "source": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0", "status": "reference"},
-  {"date": "2026-10-11", "name": "Граница проекта планировки", "role": "territory", "source": "синтетический образец: проект планировки, чертеж красных линий", "status": "official"}
- ],
- "legend": {
-  "place": 91,
-  "rows": [
-   {"level": "analysis", "role": "point_1", "text": "Школы", "type": "item"},
-   {"level": "analysis", "role": "point_2", "text": "Детские сады", "type": "item"},
-   {"level": "boundaries", "role": "territory", "text": "Граница проекта планировки", "type": "item"}
-  ]
- },
- "north": {"position": {"align": "bottom-right", "x": 86.37, "y": 73.79}, "visible": false},
- "origin": "top-left",
- "scale": 20000,
- "scale_bar": {"labels": ["0", "200", "400 м"], "length_mm": 20.0, "position": {"align": "bottom-right", "x": 86.37, "y": 83.9}, "segment_mm": 10.0, "segments": 2},
- "size_mm": {"height": 88.9, "width": 91.37},
- "stack": [
-  {"file": "k1-compare-b.png", "kind": "basemap", "roles": ["blocks", "water", "green", "railway", "road_district", "road_main"]},
-  {"kind": "overlay", "roles": ["territory", "point_2", "point_1"]}
- ],
- "units": "mm",
- "y_axis": "down"
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "boundary_planning:ga9cdffac6b20", "rings": [[[56.88, 71.0], [78.55, 58.71], [78.89, 56.83], [58.92, 38.3], [35.78, 51.36], [56.88, 71.0]]]}
+   ],
+   "id": "territory",
+   "kind": "polygon",
+   "role": "territory",
+   "simplify_mm": 0.1,
+   "source_label": "синтетический образец: проект планировки, чертеж красных линий",
+   "status": "official"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"at": [50.94, 70.23], "id": "poi_education:ovt-81584de4-e95e-4b22-907a-1dc414556db4", "name": "МБДОУ д/с 20 \"Красная Шапочка\"", "symbol": "circle"}
+   ],
+   "id": "point_2",
+   "kind": "point",
+   "role": "point_2",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "status": "reference"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"at": [13.9, 32.07], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "name": "Гимназия 2 им. Чехова", "symbol": "circle"}
+   ],
+   "id": "point_1",
+   "kind": "point",
+   "role": "point_1",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+   "status": "reference"
+  },
+  {
+   "features": [
+    {"anchor": "sw", "at": [16.15, 29.82], "id": "poi_education:ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a", "size_role": "label", "text": "Гимназия 2 им. Чехова"}
+   ],
+   "id": "labels_point_1",
+   "kind": "label",
+   "role": "point_1",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0"
+  },
+  {
+   "id": "legend",
+   "kind": "legend",
+   "legend": [
+    {"kind": "point", "role": "point_1", "symbol": "circle", "text": "Школы"},
+    {"kind": "point", "role": "point_2", "symbol": "circle", "text": "Детские сады"},
+    {"kind": "polygon", "role": "territory", "text": "Граница проекта планировки"}
+   ],
+   "role": "legend",
+   "source_label": "Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; синтетический образец: проект планировки, чертеж красных линий"
+  },
+  {
+   "id": "scale_bar",
+   "kind": "scalebar",
+   "role": "scale_bar",
+   "scalebar": {"at": [62.03, 82.78], "segment_mm": 10.0, "segments_m": [0, 200, 400]},
+   "source_label": "масштаб 1:20 000"
+  }
+ ]
 }

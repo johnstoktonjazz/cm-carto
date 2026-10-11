@@ -39,8 +39,7 @@ def drafts(project: Project, object_id: str) -> list[dict]:
                + layer_source(project, layer, origin["source_label"], origin["source_date"]))
     speed = f"{iso['speed_kmh']:g}".replace(".", ",")
     method = (f"{iso['kind']} от {iso['origin_id']} по графу улиц (слой roads), средняя скорость {speed} км/ч, "
-              f"полоса {p['isochrone']['buffer_m']:g} м вокруг достижимых частей отрезков, контур упрощен до "
-              f"{p['isochrone']['simplify_m']:g} м")
+              f"полоса {p['isochrone']['buffer_m']:g} м вокруг достижимых частей отрезков")
     inputs = json.loads(iso["fact_ids"])
 
     def draft(what: str, value: float, unit: str, formula: str) -> dict:

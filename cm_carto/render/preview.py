@@ -94,128 +94,100 @@ class Canvas:
             args |= {"outline": self.color(stroke["color"]), "width": self.width(stroke["width"])}
         (self.draw.ellipse if marker["shape"] == "circle" else self.draw.rectangle)(box, **args)
 
-    def text(self, anchor, text: str, style_key: str, align: str, plate: bool = True, angle: float = 0) -> tuple:
+    def text(self, anchor, text: str, style_key: str, align: str, plate: bool = True) -> None:
+        """Текст по точке привязки: align — какой угол рамки текста стоит в anchor; строки — по \\n."""
         font = self.font(style_key)
         color = self.color(self.std["text"]["styles"][style_key]["color"])
+        ascent, descent = font.getmetrics()
+        lines = text.split("\n")
+        w, line_h = max(self.draw.textlength(line, font=font) for line in lines), ascent + descent
+        h = line_h * len(lines)
         x, y = self.px(anchor)
-        left, top, right, bottom = self.draw.textbbox((0, 0), text, font=font, anchor="ls")
-        w, h = right - left, bottom - top
-        vertical, horizontal = (align.split("-") + ["center"])[:2] if "-" in align else ("middle", "center")
+        vertical, horizontal = align.split("-") if "-" in align else ("middle", "center")
         x0 = {"left": x, "center": x - w / 2, "right": x - w}[horizontal]
         y0 = {"top": y, "middle": y - h / 2, "bottom": y - h}[vertical]
-        if angle:  # подпись вдоль линии: отдельный слой с поворотом
-            layer = Image.new("RGBA", (int(w + 4 * self.k), int(h + 2 * self.k)), (0, 0, 0, 0))
-            d = ImageDraw.Draw(layer)
-            pad = self.std["text"]["plate"]
-            d.rectangle([0, 0, layer.width, layer.height], fill=self.color(pad["color"]))
-            d.text((2 * self.k - left, self.k - top), text, font=font, fill=color)
-            layer = layer.rotate(angle, expand=True, resample=Image.BICUBIC)
-            self.image.paste(layer, (int(x - layer.width / 2), int(y - layer.height / 2)), layer)
-            return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
         if plate:
             pad = self.std["text"]["plate"]
             px_, py_ = pad["padding_x"] * self.k, pad["padding_y"] * self.k
             self.draw.rectangle([x0 - px_, y0 - py_, x0 + w + px_, y0 + h + py_], fill=self.color(pad["color"]))
-        self.draw.text((x0 - left, y0 - top), text, font=font, fill=color)
-        return (x0, y0, x0 + w, y0 + h)
+        for i, line in enumerate(lines):
+            self.draw.text((x0, y0 + i * line_h), line, font=font, fill=color, anchor="la")
 
 
-def rings_of(geometry: dict) -> list:
-    if geometry["type"] == "Polygon":
-        return [geometry["coordinates"]]
-    if geometry["type"] == "MultiPolygon":
-        return geometry["coordinates"]
-    return []
+def role_style(std: dict, role: str) -> tuple[dict, str | None]:
+    """Стиль роли overlay: (слой map.yaml, заливка категории); «zoning.<категория>» — категория зон ПЗЗ."""
+    if role.startswith("zoning."):
+        category = std["zoning"]["categories"][role.split(".", 1)[1]]
+        return {"geometry": "polygon", "stroke": std["zoning"]["stroke"]}, category["fill"]
+    return spec_file.role_spec(std, role), None
 
 
-def lines_of(geometry: dict) -> list:
-    return {"LineString": [geometry["coordinates"]], "MultiLineString": geometry["coordinates"]}.get(geometry["type"], [])
-
-
-def feature(canvas: Canvas, item: dict) -> None:
+def swatch(canvas: Canvas, role: str, x: float, y: float) -> None:
     std = canvas.std
-    layer = spec_file.role_spec(std, item["role"])
-    geometry = item["geometry"]
-    if item["role"] == "zoning":
-        category = std["zoning"]["categories"][item[std["zoning"]["field"]]]
-        for rings in rings_of(geometry):
-            canvas.polygon(rings, {"stroke": std["zoning"]["stroke"]}, fill=category["fill"])
-    elif geometry["type"] == "Point":
-        canvas.marker(geometry["coordinates"], layer["marker"])
+    layer, fill = role_style(std, role)
+    sw, sh = std["legend"]["swatch"]
+    if layer["geometry"] == "point":
+        canvas.marker((x + sw / 2, y + sh / 2), layer["marker"])
     elif layer["geometry"] == "polygon":
-        for rings in rings_of(geometry):
-            canvas.polygon(rings, layer)
+        canvas.polygon([[[x, y], [x + sw, y], [x + sw, y + sh], [x, y + sh], [x, y]]], layer, fill=fill)
     else:
-        for coords in lines_of(geometry):
-            canvas.line(coords, layer["stroke"])
+        canvas.line([[x, y + sh / 2], [x + sw, y + sh / 2]], layer["stroke"])
 
 
-def legend_rows(std: dict, data: dict):
-    """Строки легенды с вертикальным смещением, мм: (строка, y от верха легенды); и высота легенды."""
-    rule = std["legend"]
-    y, out = 0.0, []
-    for row in data["legend"]["rows"]:
-        if row["type"] == "group" and out:
-            y += rule["group_gap"]
-        out.append((row, y))
-        y += rule["swatch"][1] + rule["item_gap"]
-    return out, y - rule["item_gap"]
-
-
-def legend(canvas: Canvas, data: dict, origin: tuple[float, float]) -> None:
-    """Строки сверху вниз от origin (мм): образец и промежутки — map.yaml: legend."""
+def legend(canvas: Canvas, layer: dict, origin: tuple[float, float]) -> None:
+    """Строки сверху вниз: образец, текст 10 pt, промежутки — map.yaml: legend; внутри — на плашке."""
     std, rule = canvas.std, canvas.std["legend"]
     sw, sh = rule["swatch"]
-    rows, _ = legend_rows(std, data)
-    for row, dy in rows:
-        x, y = origin[0], origin[1] + dy
-        if row["type"] != "item":
-            canvas.text((x, y + sh / 2), row["text"], rule["group_text"], "middle-left", plate=False)
-            continue
-        layer = spec_file.role_spec(std, row["role"])
-        square = [[[x, y], [x + sw, y], [x + sw, y + sh], [x, y + sh], [x, y]]]
-        if row["role"] == "zoning":
-            canvas.polygon(square, {"stroke": std["zoning"]["stroke"]}, fill=std["zoning"]["categories"][row["category"]]["fill"])
-        elif layer["geometry"] == "point":
-            canvas.marker((x + sw / 2, y + sh / 2), layer["marker"])
-        elif layer["geometry"] == "polygon":
-            canvas.polygon(square, layer)
-        else:
-            canvas.line([[x, y + sh / 2], [x + sw, y + sh / 2]], layer["stroke"])
+    x, y = origin
+    if "legend_at" in layer:
+        pad = rule["inside"]["padding"]
+        rows = len(layer["legend"])
+        height = rows * sh + (rows - 1) * rule["item_gap"] + 2 * pad
+        width = sw + rule["swatch_text_gap"] + max(
+            canvas.draw.textlength(r["text"], font=canvas.font(rule["text"])) / canvas.k for r in layer["legend"]) + 2 * pad
+        canvas.draw.rectangle([*canvas.px((x, y)), *canvas.px((x + width, y + height))], fill=canvas.color("background"))
+        x, y = x + pad, y + pad
+    for row in layer["legend"]:
+        swatch(canvas, row["role"], x, y)
         canvas.text((x + sw + rule["swatch_text_gap"], y + sh / 2), row["text"], rule["text"], "middle-left", plate=False)
+        y += sh + rule["item_gap"]
 
 
-def anchored(position: dict, size: tuple[float, float]) -> tuple[float, float]:
-    """Левый верхний угол элемента размера size по точке и привязке из компоновки."""
-    vertical, horizontal = position["align"].split("-") if "-" in position["align"] else ("middle", "center")
-    x = {"left": position["x"], "center": position["x"] - size[0] / 2, "right": position["x"] - size[0]}[horizontal]
-    y = {"top": position["y"], "middle": position["y"] - size[1] / 2, "bottom": position["y"] - size[1]}[vertical]
-    return x, y
+def scale_bar(canvas: Canvas, layer: dict, style: dict) -> None:
+    from cm_carto.render.overlay import number
 
-
-def scale_bar(canvas: Canvas, bar: dict) -> None:
-    rule = canvas.std["scale_bar"]
-    text_h = canvas.std["text"]["styles"][rule["text"]]["size"] * PT_MM
-    width, height = bar["length_mm"] + 2 * rule["plate_padding"] + 6, rule["tick_height"] + rule["label_gap"] + text_h + 2 * rule["plate_padding"]
-    x, y = anchored(bar["position"], (width, height))
-    canvas.draw.rectangle([*canvas.px((x, y)), *canvas.px((x + width, y + height))], fill=canvas.color("background"))
-    x0, base = x + rule["plate_padding"], y + height - rule["plate_padding"]
+    rule, bar = canvas.std["scale_bar"], layer["scalebar"]
     stroke = {"color": rule["line"]["color"], "width": rule["line"]["width"]}
-    canvas.line([[x0, base], [x0 + bar["length_mm"], base]], stroke)
-    for i, label in enumerate(bar["labels"]):
+    x0, base = bar["at"]
+    labels = [number(v, style) for v in bar["segments_m"]]
+    labels[-1] += style["number_format"]["unit_separator"] + rule["unit_label"]
+    font = canvas.font(rule["text"])
+    pad = rule["plate_padding"]
+    first = canvas.draw.textlength(labels[0], font=font) / canvas.k
+    last = canvas.draw.textlength(labels[-1], font=font) / canvas.k
+    length = bar["segment_mm"] * (len(labels) - 1)
+    ascent, descent = font.getmetrics()
+    top = base - rule["tick_height"] - rule["label_gap"] - (ascent + descent) / canvas.k
+    canvas.draw.rectangle([*canvas.px((x0 - first / 2 - pad, top - pad)), *canvas.px((x0 + length + last / 2 + pad, base + pad))],
+                          fill=canvas.color("background"))
+    canvas.line([[x0, base], [x0 + length, base]], stroke)
+    for i, label in enumerate(labels):
         tx = x0 + i * bar["segment_mm"]
         canvas.line([[tx, base], [tx, base - rule["tick_height"]]], stroke)
-        canvas.text((tx, base - rule["tick_height"] - rule["label_gap"]), label, rule["text"],
-                    "bottom-left" if i == len(bar["labels"]) - 1 else "bottom-center", plate=False)
+        canvas.text((tx, base - rule["tick_height"] - rule["label_gap"]), label, rule["text"], "bottom-center", plate=False)
 
 
-def north(canvas: Canvas, data: dict) -> None:
+def north(canvas: Canvas, at) -> None:
     rule = canvas.std["north_arrow"]
     w, h = rule["size"]
-    x, y = anchored(data["north"]["position"], (w, h))
+    x, y = at
     canvas.draw.polygon([canvas.px((x + w / 2, y + h * 0.3)), canvas.px((x, y + h)), canvas.px((x + w, y + h))],
                         fill=canvas.color(rule["color"]))
     canvas.text((x + w / 2, y), "С", rule["text"], "top-center", plate=False)
+
+
+ALIGN = {"nw": "top-left", "n": "top-center", "ne": "top-right", "w": "middle-left", "c": "center",
+         "e": "middle-right", "sw": "bottom-left", "s": "bottom-center", "se": "bottom-right"}
 
 
 def render(overlay_path: Path, out: Path) -> Path:
@@ -223,38 +195,36 @@ def render(overlay_path: Path, out: Path) -> Path:
     std, style = tokens.load("map"), tokens.load("style")
     dpi = std["export"]["dpi"]
     k = dpi / 25.4
-    width, height = data["size_mm"]["width"], data["size_mm"]["height"]
-    size = (round(width * k), round(height * k))
-    extra = data["legend"]["place"] if data["legend"]["place"] != "inside" else 0
-    image = Image.new("RGB", (size[0] + round((extra + 10) * k) if extra else size[0], size[1]), (255, 255, 255))
+    width, height = data["place"]["size_mm"]["width"], data["place"]["size_mm"]["height"]
+    legend_layer = next(layer for layer in data["layers"] if layer["kind"] == "legend")
+    outside = "legend_at" not in legend_layer
+    panel = max(std["legend"]["widths"]) + 10 if outside else 0
+    image = Image.new("RGB", (round((width + panel) * k), round(height * k)), (255, 255, 255))
+    basemap = Image.open(overlay_path.with_name(data["basemap"])).convert("RGB")
+    image.paste(basemap, (0, 0))
     canvas = Canvas(image, dpi, std, style)
-    for item in data["stack"]:
-        if item["kind"] == "basemap":
-            layer = Image.open(overlay_path.with_name(item["file"])).convert("RGBA")
-            image.paste(layer, (0, 0), layer)
-        else:
-            for f in (f for f in data["features"] if f["role"] in item["roles"]):
-                feature(canvas, f)
-    boxes = []
-    for label in data["labels"]:
-        rule = spec_file.role_spec(std, label["role"])["label"]
-        plate = rule["style"] not in std["text"]["plate"]["except_styles"]
-        boxes.append((label["object_id"], canvas.text(label["anchor"], label["text"], label["style"], label["align"],
-                                                      plate, label.get("angle", 0))))
-    scale_bar(canvas, data["scale_bar"])
-    if data["north"]["visible"]:
-        north(canvas, data)
-    if data["legend"]["place"] == "inside":  # на белой плашке с полем inside.padding, низом в точку компоновки
-        pad = std["legend"]["inside"]["padding"]
-        _, height_mm = legend_rows(std, data)
-        x, bottom = data["legend"]["position"]["x"], data["legend"]["position"]["y"]
-        canvas.draw.rectangle([*canvas.px((x, bottom - height_mm - 2 * pad)), *canvas.px((x + 2 * pad + 60, bottom))],
-                              fill=canvas.color("background"))
-        legend(canvas, data, (x + pad, bottom - pad - height_mm))
-    else:
-        legend(canvas, data, (width + 10, 10))
+    for layer in data["layers"]:
+        kind = layer["kind"]
+        if kind in ("polygon", "line", "point"):
+            spec_role, fill = role_style(std, layer["role"])
+            for f in layer["features"]:
+                if kind == "polygon":
+                    canvas.polygon(f["rings"], spec_role, fill=fill)
+                elif kind == "line":
+                    canvas.line(f["path"], spec_role["stroke"])
+                else:
+                    canvas.marker(f["at"], spec_role["marker"])
+        elif kind == "label":
+            for f in layer["features"]:
+                if "leader_to" in f:
+                    canvas.line([f["leader_to"], f["at"]], std["layers"]["leader"]["stroke"])
+                plate = f["size_role"] not in std["text"]["plate"]["except_styles"]
+                canvas.text(f["at"], f["text"], f["size_role"], ALIGN[f["anchor"]], plate)
+        elif kind == "legend":
+            legend(canvas, layer, layer["legend_at"] if not outside else (width + 10, 10))
+        elif kind == "scalebar":
+            scale_bar(canvas, layer, style)
+        elif kind == "north":
+            north(canvas, layer["features"][0]["at"])
     image.save(out, optimize=False)
-    for (a, ba), (b, bb) in ((x, y) for i, x in enumerate(boxes) for y in boxes[i + 1:]):
-        if ba[0] < bb[2] and bb[0] < ba[2] and ba[1] < bb[3] and bb[1] < ba[3]:
-            print(f"{overlay_path.name}: подписи пересекаются: {a} и {b}")
     return out

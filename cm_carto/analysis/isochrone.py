@@ -10,7 +10,9 @@
 4. Достижимые части ребер: ребро доходит от каждого конца на остаток времени × скорость; на краю изохроны ребро
    достижимо частично. Части, пришедшие с разных концов, объединяются.
 5. Полигон: полоса `buffer_m` вокруг достижимых частей (для контура — вместе с самим контуром), внутренние дыры
-   закрыты, контур упрощен с допуском `simplify_m`. Изохрона — оценка по графу улиц, не круг.
+   закрыты, контур не упрощается: изохроны разных сроков от одного объекта вложены точно. Изохрона — оценка по
+   графу улиц, не круг.
+
 Скорость в слое `isochrones` — средняя по достижимой сети: длина / время прохода по ее частям.
 """
 
@@ -100,7 +102,7 @@ def polygon(r: Reach, extra: list, contour, p: dict) -> MultiPolygon:
     if contour is not None:
         area = area.union(contour)
     parts = area.geoms if area.geom_type == "MultiPolygon" else [area]
-    closed = shapely.union_all([Polygon(part.exterior) for part in parts]).simplify(p["simplify_m"])
+    closed = shapely.union_all([Polygon(part.exterior) for part in parts])
     return closed if closed.geom_type == "MultiPolygon" else MultiPolygon([closed])
 
 

@@ -22,7 +22,7 @@ def test_isochrones_grow_with_minutes_and_nest(tmp_path):
     areas = [r["geometry"].area for r in rows]
     assert areas == sorted(areas) and len(set(areas)) == 3
     for small, big in zip(rows, rows[1:]):
-        assert big["geometry"].buffer(0.5).contains(small["geometry"])
+        assert small["geometry"].difference(big["geometry"]).area < 0.01
 
 
 def test_edge_is_reached_partially_at_the_border(tmp_path):

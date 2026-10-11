@@ -145,7 +145,7 @@
       "stage": 4,
       "title": "изохроны пешком и на автомобиле на графе OSM",
       "agent": "analysis-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T2.1"
       ]

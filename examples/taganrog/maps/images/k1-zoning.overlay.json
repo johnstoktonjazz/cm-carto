@@ -1,48 +1,99 @@
 {
  "basemap": "k1-zoning.png",
- "crs": "EPSG:32637",
- "extent": [493600.0, 5228107.5, 495700.0, 5229592.5],
- "features": [
-  {"code": "Р-1", "fact_ids": [], "geometry": {"coordinates": [[[195.47, 153.99], [174.58, 165.81], [281.36, 265.38], [302.24, 253.56], [195.47, 153.99]]], "type": "Polygon"}, "object_id": "zones_pzz:00-00-7.1", "role": "zoning", "status": "cadastral", "zone": "Р"},
-  {"code": "ОД-1", "fact_ids": [], "geometry": {"coordinates": [[[195.47, 153.99], [248.12, 203.09], [326.46, 158.77], [273.8, 109.67], [195.47, 153.99]]], "type": "Polygon"}, "object_id": "zones_pzz:00-00-7.2", "role": "zoning", "status": "cadastral", "zone": "ОД"},
-  {"code": "Ж-3", "fact_ids": [], "geometry": {"coordinates": [[[248.12, 203.09], [302.24, 253.56], [380.58, 209.24], [326.46, 158.77], [248.12, 203.09]]], "type": "Polygon"}, "object_id": "zones_pzz:00-00-7.3", "role": "zoning", "status": "cadastral", "zone": "Ж"},
-  {"fact_ids": [], "geometry": {"coordinates": [[[253.83, 182.33], [242.96, 164.37], [214.61, 143.16], [176.32, 164.82], [214.35, 200.29], [253.83, 182.33]]], "type": "Polygon"}, "object_id": "zouit:00-00-6.1", "role": "zone_sanitary", "status": "cadastral"},
-  {"fact_ids": [], "geometry": {"coordinates": [[[264.78, 244.68], [351.45, 195.53], [352.83, 188.01], [315.01, 152.52], [272.93, 113.89], [180.38, 166.14], [264.78, 244.68]]], "type": "Polygon"}, "object_id": "boundary_planning:ga9cdffac6b20", "role": "territory", "status": "official"}
- ],
- "format": "cm-carto/overlay-draft/0.1",
- "labels": [
-  {"align": "center", "anchor": [238.41, 209.69], "object_id": "zones_pzz:00-00-7.1", "placement": "centroid", "role": "zoning", "style": "label_minor", "text": "Р-1"},
-  {"align": "center", "anchor": [260.96, 156.38], "object_id": "zones_pzz:00-00-7.2", "placement": "centroid", "role": "zoning", "style": "label_minor", "text": "ОД-1"},
-  {"align": "center", "anchor": [314.35, 206.17], "object_id": "zones_pzz:00-00-7.3", "placement": "centroid", "role": "zoning", "style": "label_minor", "text": "Ж-3"}
- ],
+ "map": {"crs": "EPSG:32637", "extent": [493600.0, 5228107.5, 495700.0, 5229592.5], "rotation_deg": 0, "scale": 5000},
+ "place": {"name": "sheet", "size_mm": {"height": 297.0, "width": 420.0}},
  "layers": [
-  {"date": "2026-10-11", "name": "Граница проекта планировки", "role": "territory", "source": "синтетический образец: проект планировки, чертеж красных линий", "status": "official"},
-  {"date": "2026-10-11", "name": "Санитарно-защитная зона", "role": "zone_sanitary", "source": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены", "status": "cadastral"},
-  {"date": "2026-10-11", "name": "Территориальные зоны", "role": "zoning", "source": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены", "status": "cadastral"}
- ],
- "legend": {
-  "place": "inside",
-  "position": {"align": "bottom-left", "x": 14.82, "y": 256.82},
-  "rows": [
-   {"level": "boundaries", "role": "territory", "text": "Граница проекта планировки", "type": "item"},
-   {"level": "boundaries", "role": "zone_sanitary", "text": "Санитарно-защитная зона", "type": "item"},
-   {"level": "boundaries", "text": "Территориальные зоны", "type": "heading"},
-   {"category": "Ж", "level": "boundaries", "role": "zoning", "text": "Жилая (Ж)", "type": "item"},
-   {"category": "ОД", "level": "boundaries", "role": "zoning", "text": "Общественно-деловая (ОД)", "type": "item"},
-   {"category": "Р", "level": "boundaries", "role": "zoning", "text": "Рекреационная (Р)", "type": "item"}
-  ]
- },
- "north": {"position": {"align": "bottom-right", "x": 415.0, "y": 256.53}, "visible": false},
- "origin": "top-left",
- "scale": 5000,
- "scale_bar": {"labels": ["0", "50", "100 м"], "length_mm": 20.0, "position": {"align": "bottom-right", "x": 415.0, "y": 266.64}, "segment_mm": 10.0, "segments": 2},
- "size_mm": {"height": 297.0, "width": 420.0},
- "stack": [
-  {"file": "k1-zoning.png", "kind": "basemap", "roles": ["blocks", "water", "green"]},
-  {"kind": "overlay", "roles": ["zoning"]},
-  {"file": "k1-zoning-2.png", "kind": "basemap", "roles": ["railway", "road_district", "road_main"]},
-  {"kind": "overlay", "roles": ["zone_sanitary", "territory"]}
- ],
- "units": "mm",
- "y_axis": "down"
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "zones_pzz:00-00-7.3", "name": "Зона Ж-3", "rings": [[[248.12, 203.09], [302.24, 253.56], [380.58, 209.24], [326.46, 158.77], [248.12, 203.09]]]}
+   ],
+   "id": "zoning_zh",
+   "kind": "polygon",
+   "role": "zoning.Ж",
+   "simplify_mm": 0.1,
+   "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены",
+   "status": "cadastral"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "zones_pzz:00-00-7.2", "name": "Зона ОД-1", "rings": [[[195.47, 153.99], [248.12, 203.09], [326.46, 158.77], [273.8, 109.67], [195.47, 153.99]]]}
+   ],
+   "id": "zoning_od",
+   "kind": "polygon",
+   "role": "zoning.ОД",
+   "simplify_mm": 0.1,
+   "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены",
+   "status": "cadastral"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "zones_pzz:00-00-7.1", "name": "Зона Р-1", "rings": [[[195.47, 153.99], [174.58, 165.81], [281.36, 265.38], [302.24, 253.56], [195.47, 153.99]]]}
+   ],
+   "id": "zoning_r",
+   "kind": "polygon",
+   "role": "zoning.Р",
+   "simplify_mm": 0.1,
+   "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены",
+   "status": "cadastral"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "zouit:00-00-6.1", "name": "СЗЗ предприятия, синтетический образец", "rings": [[[253.83, 182.33], [242.96, 164.37], [214.61, 143.16], [176.32, 164.82], [214.35, 200.29], [253.83, 182.33]]]}
+   ],
+   "id": "zone_sanitary",
+   "kind": "polygon",
+   "role": "zone_sanitary",
+   "simplify_mm": 0.1,
+   "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены",
+   "status": "cadastral"
+  },
+  {
+   "fact_ids": [],
+   "features": [
+    {"id": "boundary_planning:ga9cdffac6b20", "rings": [[[264.78, 244.68], [351.45, 195.53], [352.83, 188.01], [315.01, 152.52], [272.93, 113.89], [180.38, 166.14], [264.78, 244.68]]]}
+   ],
+   "id": "territory",
+   "kind": "polygon",
+   "role": "territory",
+   "simplify_mm": 0.1,
+   "source_label": "синтетический образец: проект планировки, чертеж красных линий",
+   "status": "official"
+  },
+  {
+   "features": [
+    {"anchor": "c", "at": [238.41, 209.69], "id": "zones_pzz:00-00-7.1", "size_role": "label_minor", "text": "Р-1"},
+    {"anchor": "c", "at": [259.47, 157.67], "id": "zones_pzz:00-00-7.2", "size_role": "label_minor", "text": "ОД-1"},
+    {"anchor": "c", "at": [314.35, 206.17], "id": "zones_pzz:00-00-7.3", "size_role": "label_minor", "text": "Ж-3"}
+   ],
+   "id": "labels_zoning",
+   "kind": "label",
+   "role": "zoning",
+   "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены"
+  },
+  {
+   "id": "legend",
+   "kind": "legend",
+   "legend": [
+    {"kind": "polygon", "role": "territory", "text": "Граница проекта планировки"},
+    {"kind": "polygon", "role": "zone_sanitary", "text": "Санитарно-защитная зона"},
+    {"kind": "polygon", "role": "zoning.Ж", "text": "Жилая (Ж)"},
+    {"kind": "polygon", "role": "zoning.ОД", "text": "Общественно-деловая (ОД)"},
+    {"kind": "polygon", "role": "zoning.Р", "text": "Рекреационная (Р)"}
+   ],
+   "legend_at": [14.82, 220.94],
+   "role": "legend",
+   "source_label": "синтетический образец: проект планировки, чертеж красных линий; КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены"
+  },
+  {
+   "id": "scale_bar",
+   "kind": "scalebar",
+   "role": "scale_bar",
+   "scalebar": {"at": [390.66, 265.51], "segment_mm": 10.0, "segments_m": [0, 50, 100]},
+   "source_label": "масштаб 1:5 000"
+  }
+ ]
 }
