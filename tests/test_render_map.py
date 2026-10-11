@@ -253,3 +253,27 @@ def test_extent_fits_scale_and_inside_legend(project):
     legend = layer(side(project, "extent", ".overlay.json"), "legend")
     x, y = legend["legend_at"]
     assert 0 < x < 251.88 and 0 < y < 187.68
+
+
+def test_within_keeps_only_objects_inside_contour(project, capsys):
+    """within: школы — только внутри изохроны (s1 внутри, s2 вне круга, хотя в охвате карты); площадь, пересекающая
+    контур, остается. В счете и на карте — только они."""
+    spec = yaml.safe_load(describe(project).read_text(encoding="utf-8"))
+    spec["layers"]["point_1"]["within"] = "isochrones:walk-10"
+    spec["layers"]["territory"]["within"] = "isochrones:walk-10"
+    spec["center"] = "isochrones:walk-10"
+    (project / "within.yaml").write_text(yaml.safe_dump(spec | {"out": "maps/within.png"}, allow_unicode=True),
+                                         encoding="utf-8")
+    build.render(project / "within.yaml")
+    assert "point_1 ← poi_education (poi_type = 'school') внутри isochrones:walk-10: в охвате 1" \
+        in capsys.readouterr().out
+    doc = side(project, "within", ".overlay.json")
+    assert [f["id"] for f in layer(doc, "point_1")["features"]] == ["poi_education:s1"]
+    assert [f["id"] for f in layer(doc, "territory")["features"]] == ["boundary_planning:t"]
+
+
+def test_within_unknown_object_is_refused(project):
+    layers = yaml.safe_load(describe(project).read_text(encoding="utf-8"))["layers"]
+    layers["point_1"]["within"] = "isochrones:walk-99"
+    with pytest.raises(ValueError, match="объект isochrones:walk-99: в project.gpkg найдено 0, нужен один"):
+        build.render(describe(project, "unknown", layers=layers))

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import jsonschema
 import pyogrio
+import shapely
 import yaml
 
 from cm_carto import gpkg, paths, project as project_file, tokens
@@ -19,6 +20,8 @@ from cm_carto import gpkg, paths, project as project_file, tokens
 SCHEMA = paths.ROOT / "schema" / "map.schema.json"
 # Геометрия слоя геопакета (контракт) → геометрия роли в map.yaml.
 GEOMETRY = {"MultiPolygon": "polygon", "MultiLineString": "line", "Point": "point"}
+# Поле охвата по объекту (extent: <object_id>), мм места с каждой стороны.
+FIELD_MM = 5
 
 
 @cache
@@ -44,6 +47,8 @@ class Role:
     where: str | None  # отбор (subset string)
     title: str         # строка легенды
     level: str         # уровень map.yaml: levels
+    within: str | None = None  # object_id контура: на карте только объекты внутри него
+    contour: shapely.Geometry | None = None
 
 
 @dataclass(frozen=True)
@@ -82,6 +87,18 @@ def fit_scale(extent: list[float], size_mm: tuple[float, float]) -> int:
     exact = max((xmax - xmin) / size_mm[0], (ymax - ymin) / size_mm[1]) * 1000
     step = 10 ** max(math.floor(math.log10(exact)) - 1, 0)
     return int(math.ceil(exact / step) * step)
+
+
+def find(path: Path, data: Path, present: set[str], object_id: str) -> shapely.Geometry:
+    """Геометрия объекта геопакета по object_id (<слой>:<ключ>): ровно один объект."""
+    layer = object_id.split(":", 1)[0]
+    if layer not in present:
+        raise ValueError(f"{path}: объект {object_id}: слоя {layer} нет в {data.name}")
+    frame = pyogrio.read_dataframe(data, layer=layer, columns=["object_id"],
+                                   where=f"object_id = '{object_id.replace(chr(39), chr(39) * 2)}'")
+    if len(frame) != 1:
+        raise ValueError(f"{path}: объект {object_id}: в {data.name} найдено {len(frame)}, нужен один")
+    return frame.geometry.iloc[0]
 
 
 def load(path: Path) -> Spec:
@@ -134,13 +151,31 @@ def load(path: Path) -> Spec:
         geometry = GEOMETRY[gpkg.layers()[layer][0]]
         if geometry != spec["geometry"]:
             raise ValueError(f"{path}: роль {key} рисует {spec['geometry']}, у слоя {layer} геометрия {geometry}")
-        roles.append(Role(key, layer, options.get("where"), options.get("title", spec["title"]), spec["level"]))
+        within = options.get("within")
+        contour = None
+        if within:
+            contour = find(path, data, present, within)
+            if contour.geom_type not in ("Polygon", "MultiPolygon"):
+                raise ValueError(f"{path}: роль {key}: within {within} — не контур ({contour.geom_type})")
+        roles.append(Role(key, layer, options.get("where"), options.get("title", spec["title"]), spec["level"],
+                          within, contour))
 
     if "extent" in raw:
-        xmin, ymin, xmax, ymax = raw["extent"]
-        center, scale = ((xmin + xmax) / 2, (ymin + ymax) / 2), fit_scale(raw["extent"], size)
+        if isinstance(raw["extent"], str):
+            bounds = list(find(path, data, present, raw["extent"]).bounds)
+            scale = fit_scale(bounds, (size[0] - 2 * FIELD_MM, size[1] - 2 * FIELD_MM))
+        else:
+            bounds = raw["extent"]
+            scale = fit_scale(bounds, size)
+        xmin, ymin, xmax, ymax = bounds
+        center = ((xmin + xmax) / 2, (ymin + ymax) / 2)
     else:
-        center, scale = tuple(raw["center"]), raw["scale"]
+        if isinstance(raw["center"], str):
+            xmin, ymin, xmax, ymax = find(path, data, present, raw["center"]).bounds
+            center = ((xmin + xmax) / 2, (ymin + ymax) / 2)
+        else:
+            center = tuple(raw["center"])
+        scale = raw["scale"]
     return Spec(path=path, raw=raw, project=project, data=data, place=raw["place"], size_mm=size, center=center,
                 scale=scale, north=raw.get("north"), legend=legend, roles=roles, title=raw.get("title"),
                 fact_ids=raw.get("fact_ids", []), out=(base / raw["out"]).resolve())

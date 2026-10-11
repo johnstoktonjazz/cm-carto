@@ -8,7 +8,7 @@
 Overlay лежит поверх всей подложки: зоны ПЗЗ, которые по стандарту стоят под улицами (zoning.above), закрывают улицы
 внутри зон — в overlay 1.0.0 нет места слою между частями подложки (вопрос к контракту, доклад render-dev).
 Стили ролей — design/qgis/<роль>.qml без правок (К-004). Слой роли — слой геопакета с отбором where и объектами,
-пересекающими охват карты. Кеш — по хэшу описания, анкеты, геопакета, стилей и токенов верстки, контрактов и кода.
+пересекающими охват карты, и, если задан within, — внутри контура. Кеш — по хэшу описания, анкеты, геопакета, стилей и токенов верстки, контрактов и кода.
 """
 
 import atexit
@@ -105,12 +105,20 @@ def vector(spec: Spec, std: dict, role: Role, rect: QgsRectangle) -> Drawn:
     data = role.level != "basemap"
     request = QgsFeatureRequest().setFilterRect(rect).setFlags(QgsFeatureRequest.Flag.ExactIntersect)
     names = layer.fields().names()
+    if role.contour is not None:
+        shapely.prepare(role.contour)
+        # Точки — внутри контура, линии и площади — пересекающие его.
+        inside = role.contour.covers if spec_file.role_spec(std, role.key)["geometry"] == "point" \
+            else role.contour.intersects
     found = []
     for f in layer.getFeatures(request):
+        geom = shapely.from_wkb(bytes(f.geometry().asWkb())) if data or role.contour is not None else None
+        if role.contour is not None and not inside(geom):
+            continue
         # Столбец, которого нет ни у одного объекта слоя (source_license у официальных), в файле не пишется.
         row = {k: None for k in SOURCE_FIELDS} | {k: value(f[k]) for k in names}
         if data:
-            row["geom"] = shapely.from_wkb(bytes(f.geometry().asWkb()))
+            row["geom"] = geom
         found.append((f.id(), row))
     found.sort(key=lambda item: item[0])
     ids = ",".join(str(fid) for fid, _ in found) or "-1"
@@ -240,7 +248,8 @@ def draw(spec: Spec, folder: Path) -> None:
     for role in spec.roles:
         d = vector(spec, std, role, rect)
         where = f" ({role.where})" if role.where else ""
-        print(f"{spec.path.name}: {role.key} ← {role.layer}{where}: в охвате {len(d.rows)}")
+        within = f" внутри {role.within}" if role.within else ""
+        print(f"{spec.path.name}: {role.key} ← {role.layer}{where}{within}: в охвате {len(d.rows)}")
         if d.rows:
             drawn.append(d)
             project.addMapLayer(d.layer, False)

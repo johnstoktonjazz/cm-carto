@@ -31,13 +31,21 @@
       "description": "необязательно, для описаний, перенесенных от верстки: должна совпасть с crs.name анкеты"
     },
     "center": {
-      "type": "array",
-      "items": {
-        "type": "number"
-      },
-      "minItems": 2,
-      "maxItems": 2,
-      "description": "центр карты [x, y] в системе координат проекта; вместе со scale"
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+:.+$"
+        }
+      ],
+      "description": "центр карты: [x, y] в системе координат проекта или object_id объекта геопакета (центр его охвата); вместе со scale"
     },
     "scale": {
       "type": "integer",
@@ -45,13 +53,21 @@
       "description": "знаменатель масштаба при печати в размер места; вместе с center"
     },
     "extent": {
-      "type": "array",
-      "items": {
-        "type": "number"
-      },
-      "minItems": 4,
-      "maxItems": 4,
-      "description": "охват [xmin, ymin, xmax, ymax] в системе координат проекта вместо center и scale: карта по центру охвата, масштаб — наименьший с двумя значащими цифрами, при котором охват виден целиком"
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+:.+$"
+        }
+      ],
+      "description": "охват вместо center и scale: [xmin, ymin, xmax, ymax] в системе координат проекта или object_id объекта геопакета (охват объекта с полем 5 мм места с каждой стороны); карта по центру охвата, масштаб — наименьший с двумя значащими цифрами, при котором охват виден целиком"
     },
     "north": {
       "type": "boolean",
@@ -86,6 +102,11 @@
           "title": {
             "type": "string",
             "description": "строка легенды и имя слоя в provenance; по умолчанию title роли из map.yaml"
+          },
+          "within": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+:.+$",
+            "description": "object_id контура в геопакете (например, изохроны): рисуются и попадают в счет только объекты роли внутри него — точки внутри контура, линии и площади, пересекающие его"
           }
         }
       }

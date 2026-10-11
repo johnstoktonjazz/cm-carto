@@ -1,16 +1,16 @@
 # К1, карта 1: аналитическая карта под макет map_analysis (место landscape, легенда 123 мм).
-# Школы, детские сады и больницы вокруг территории проекта планировки; станции и остановки — для ориентира.
-# Изохроны 10 минут пешком добавятся ролью reach_walk из слоя isochrones после этапа анализа (T4.1).
+# Счет — 10 минут пешком от границы проекта планировки (изохрона T4.1): на карте только посчитанные объекты групп 1–3
+# внутри изохроны (MAPS.md, раздел 1) и остановки внутри нее для ориентира. Охват — по изохроне с полем.
 place: landscape
 project: ../project.yaml
-center: [494500, 5229000]
-scale: 10000
+extent: isochrones:walk-10-boundary_planning-ga9cdffac6b20
 legend: 123
 layers:
-  point_1: {layer: poi_education, where: "poi_type = 'school'", title: Школы}
-  point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", title: Детские сады}
-  point_3: {layer: poi_health, where: "poi_type IN ('hospital', 'clinic')", title: Больницы и поликлиники}
-  stop: {layer: transit_stops, title: Остановки}
+  point_1: {layer: poi_education, where: "poi_type = 'school'", within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Школы}
+  point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Детские сады}
+  point_3: {layer: poi_health, within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Медицинские учреждения}
+  reach_walk: {layer: isochrones, where: "object_id = 'isochrones:walk-10-boundary_planning-ga9cdffac6b20'", title: 10 минут пешком от границы проекта планировки}
+  stop: {layer: transit_stops, within: isochrones:walk-10-boundary_planning-ga9cdffac6b20, title: Остановки и станции}
   territory: {layer: boundary_planning, title: Граница проекта планировки}
   road_express: {layer: roads, where: "road_class = 'express'"}
   road_main: {layer: roads, where: "road_class = 'main'"}
@@ -19,5 +19,5 @@ layers:
   green: {}
   water: {}
   blocks: {}
-title: Школы, детские сады и больницы вокруг территории проекта планировки
+title: Школы, детские сады и медицина в 10 минутах пешком от территории проекта планировки
 out: images/k1-analysis.png
