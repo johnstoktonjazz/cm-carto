@@ -6,7 +6,7 @@
 
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from functools import cache
 from pathlib import Path
 
@@ -67,6 +67,7 @@ class Spec:
     title: str | None
     fact_ids: list[str]
     out: Path
+    group: list["Spec"] = field(default_factory=list)  # соседние карты сравнения (compare_with), без своих групп
 
     @property
     def overlay_out(self) -> Path:
@@ -102,6 +103,29 @@ def find(path: Path, data: Path, present: set[str], object_id: str) -> shapely.G
 
 
 def load(path: Path) -> Spec:
+    """Описание карты и, если задано compare_with, карты ее группы сравнения с проверкой единства группы."""
+    spec = read(path)
+    if "compare_with" not in spec.raw:
+        return spec
+    group = [spec, *(read(spec.path.parent / other) for other in spec.raw["compare_with"])]
+    members = sorted(str(s.path) for s in group)
+    for other in group[1:]:
+        own = sorted(str(p) for p in [other.path, *((other.path.parent / o).resolve()
+                                                     for o in other.raw.get("compare_with", []))])
+        if own != members:
+            raise ValueError(f"{spec.path}: группа сравнения {', '.join(members)}, у {other.path.name} — "
+                             f"{', '.join(own)}: compare_with у карт группы должны называть друг друга")
+        for name, mine, theirs in [("место", spec.place, other.place), ("масштаб", spec.scale, other.scale),
+                                   ("ширина легенды", spec.legend, other.legend),
+                                   ("роли", [(r.key, r.title) for r in spec.roles],
+                                    [(r.key, r.title) for r in other.roles])]:
+            if mine != theirs:
+                raise ValueError(f"{spec.path}: сравнение с {other.path.name}: {name} {mine} против {theirs} — "
+                                 f"у карт сравнения одно место, один масштаб, одна легенда (MAPS.md, разделы 6, 9)")
+    return replace(spec, group=group[1:])
+
+
+def read(path: Path) -> Spec:
     path = Path(path).resolve()
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     errors = [f"{'/'.join(map(str, e.absolute_path)) or '.'}: {e.message}"

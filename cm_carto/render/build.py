@@ -231,6 +231,34 @@ def image_schema() -> dict:
     return json.loads(paths.schema("image").read_text(encoding="utf-8"))
 
 
+def frame(spec: Spec) -> QgsRectangle:
+    """Охват карты в системе координат проекта: центр, масштаб и размер места."""
+    cx, cy = spec.center
+    half_w, half_h = spec.size_mm[0] * spec.scale / 2000, spec.size_mm[1] * spec.scale / 2000
+    return QgsRectangle(cx - half_w, cy - half_h, cx + half_w, cy + half_h)
+
+
+def legend(spec: Spec, std: dict, drawn: list[Drawn]) -> list[tuple[Role, dict, list[tuple[str, str]]]]:
+    """Строки легенды: роли уровней с legend: true, нарисованные на этой карте или на соседней карте сравнения
+    (compare_with), в порядке стандарта; у ролей с категориями — категории, встреченные на картах группы, в порядке
+    стиля. У соседей — тот же отбор по их охвату, без отрисовки. Строки у карт группы одни и те же."""
+    shown = [d for d in drawn if std["levels"][d.role.level]["legend"]]
+    for other in spec.group:
+        rect = frame(other)
+        found = [vector(other, std, role, rect) for role in other.roles if std["levels"][role.level]["legend"]]
+        shown += [d for d in found if d.rows]
+    rows = []
+    for role in spec.roles:
+        mine = [d for d in shown if d.role.key == role.key]
+        if not mine:
+            continue
+        values = {value for d in mine for value, _ in d.categories()}
+        renderer = mine[0].layer.renderer()
+        categories = [(c.value(), c.label()) for c in renderer.categories() if c.value() in values] if values else []
+        rows.append((role, mine[0].spec, categories))
+    return rows
+
+
 def draw(spec: Spec, folder: Path) -> None:
     """Рендер в папку кеша: подложка PNG, provenance подложки, overlay.json."""
     start()
@@ -240,9 +268,7 @@ def draw(spec: Spec, folder: Path) -> None:
     project.setCrs(QgsCoordinateReferenceSystem.fromWkt(spec.project.crs.to_wkt()))
     layout = template(project, paths.qgis_styles() / f"map_{spec.place}.qpt")
     item = layout.itemById("map")
-    cx, cy = spec.center
-    half_w, half_h = spec.size_mm[0] * spec.scale / 2000, spec.size_mm[1] * spec.scale / 2000
-    rect = QgsRectangle(cx - half_w, cy - half_h, cx + half_w, cy + half_h)
+    rect = frame(spec)
 
     drawn = []
     for role in spec.roles:
@@ -276,7 +302,8 @@ def draw(spec: Spec, folder: Path) -> None:
     entries = {d.role.key: layer_entry(d) for d in drawn if d.role.level != "basemap"}
     bounds = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
     obstacles = basemap_labels(item, rect, spec, std["export"]["dpi"])
-    data, unplaced = overlay.build(spec, std, style, drawn, entries, north, layout, bounds, spec.out.name, obstacles)
+    data, unplaced = overlay.build(spec, std, style, drawn, legend(spec, std, drawn), entries, north, layout, bounds,
+                                   spec.out.name, obstacles)
     for text in unplaced:
         print(f"{spec.path.name}: подпись не встала без наездов: {text}")
     (folder / spec.overlay_out.name).write_text(overlay.dumps(data), encoding="utf-8")
@@ -284,12 +311,13 @@ def draw(spec: Spec, folder: Path) -> None:
 
 
 def cache_key(spec: Spec) -> str:
-    """Хэш всего, от чего зависит результат: описание, анкета, геопакет, токены и стили верстки, контракт, код."""
+    """Хэш всего, от чего зависит результат: описание, анкета, геопакет (и у соседних карт сравнения — их легенда
+    зависит от соседей), токены и стили верстки, контракт, код."""
     digest = hashlib.sha256()
     design = [paths.design() / "tokens" / "map.yaml", paths.design() / "tokens" / "style.yaml",
               *sorted(p for p in paths.qgis_styles().iterdir() if p.is_file())]
-    for path in [spec.path, spec.project.root / "project.yaml", spec.data, *design, paths.schema("image"),
-                 paths.schema("overlay"), *CODE]:
+    inputs = [path for s in [spec, *spec.group] for path in (s.path, s.project.root / "project.yaml", s.data)]
+    for path in [*inputs, *design, paths.schema("image"), paths.schema("overlay"), *CODE]:
         digest.update(path.name.encode())
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     digest.update(Qgis.version().encode())

@@ -219,17 +219,18 @@ class Overlay:
 
     # Служебные слои
 
-    def legend_layer(self, drawn: list, entries: dict) -> dict:
-        """Строки легенды: роли уровней с legend: true в порядке стандарта; категории — встреченные на карте."""
+    def legend_layer(self, items: list, entries: dict) -> dict:
+        """Строки легенды: items — (роль, роль map.yaml, категории) в порядке стандарта (build.legend: у карт
+        сравнения — общие на группу); у роли с категориями — строка на категорию."""
         rows = []
-        for d in (d for d in drawn if self.std["levels"][d.role.level]["legend"]):
-            kind = d.spec["geometry"]
-            if d.role.key == "zoning":
-                rows += [{"role": f"zoning.{value}", "kind": kind, "text": title} for value, title in d.categories()]
+        for role, spec_role, categories in items:
+            kind = spec_role["geometry"]
+            if role.key == "zoning":
+                rows += [{"role": f"zoning.{value}", "kind": kind, "text": title} for value, title in categories]
                 continue
-            row = {"role": d.role.key, "kind": kind, "text": d.role.title}
+            row = {"role": role.key, "kind": kind, "text": role.title}
             if kind == "point":
-                row["symbol"] = d.spec["marker"]["shape"]
+                row["symbol"] = spec_role["marker"]["shape"]
             rows.append(row)
         rule = self.std["legend"]
         if not rows:
@@ -349,16 +350,16 @@ class Overlay:
         return list(reversed(layers))
 
 
-def build(spec, std: dict, style: dict, drawn: list, entries: dict, north: bool, layout, rect, basemap: str,
-          basemap_labels: list) -> tuple[dict, list[str]]:
-    """overlay.json по контракту и подписи, которые не встали без наездов. basemap_labels — рамки подписей
-    подложки в мм: подписи overlay их не задевают."""
+def build(spec, std: dict, style: dict, drawn: list, legend_items: list, entries: dict, north: bool, layout, rect,
+          basemap: str, basemap_labels: list) -> tuple[dict, list[str]]:
+    """overlay.json по контракту и подписи, которые не встали без наездов. legend_items — строки легенды
+    (build.legend); basemap_labels — рамки подписей подложки в мм: подписи overlay их не задевают."""
     data = [d for d in drawn if d.role.level != "basemap"]
     o = Overlay(spec, std, style, layout, rect)
     o.obstacles += [box(*r) for r in basemap_labels]
     layers = o.data_layers(data, entries)
     service = [o.scale_bar_layer()] + ([o.north_layer()] if north else [])
-    legend = o.legend_layer(data, entries)
+    legend = o.legend_layer(legend_items, entries)
     labels = o.label_layers(data, entries)
     xmin, ymin, xmax, ymax = rect
     doc = {"basemap": basemap,

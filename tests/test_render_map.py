@@ -277,3 +277,49 @@ def test_within_unknown_object_is_refused(project):
     layers["point_1"]["within"] = "isochrones:walk-99"
     with pytest.raises(ValueError, match="объект isochrones:walk-99: в project.gpkg найдено 0, нужен один"):
         build.render(describe(project, "unknown", layers=layers))
+
+
+def compare_pair(project, prefix: str, **changes_b) -> tuple:
+    """Две карты сравнения: у a сады в охвате есть, у b отбор садов пустой; compare_with друг на друга."""
+    layers = yaml.safe_load(describe(project).read_text(encoding="utf-8"))["layers"]
+    layers["point_2"] = {"layer": "poi_education", "where": "poi_type = 'kindergarten'", "title": "Детские сады"}
+    empty = {**layers, "point_2": {**layers["point_2"], "where": "poi_type = 'kindergarten' AND name = 'нет'"}}
+    a = describe(project, f"{prefix}a", layers=layers, compare_with=[f"{prefix}b.yaml"])
+    b = describe(project, f"{prefix}b", layers=empty, compare_with=[f"{prefix}a.yaml"], **changes_b)
+    return a, b
+
+
+def test_compare_group_shares_legend(project):
+    """Сравнение: у b садов 0, но строка «Детские сады» в легенде обеих карт; строки легенды — байт в байт."""
+    for path in compare_pair(project, "cmp-"):
+        build.render(path)
+    a, b = side(project, "cmp-a", ".overlay.json"), side(project, "cmp-b", ".overlay.json")
+    assert "point_2" in [item["id"] for item in a["layers"]]
+    assert "point_2" not in [item["id"] for item in b["layers"]]
+    assert "Детские сады" in [row["text"] for row in layer(b, "legend")["legend"]]
+    text = {name: (project / "maps" / f"cmp-{name}.overlay.json").read_text(encoding="utf-8") for name in "ab"}
+    legend = {name: text[name][text[name].index('"legend": ['):].split("]", 1)[0] for name in "ab"}
+    assert legend["a"] == legend["b"]
+
+
+def test_compare_group_scale_mismatch_is_refused(project):
+    a, _ = compare_pair(project, "scale-", scale=20000)
+    with pytest.raises(ValueError, match="сравнение с scale-b.yaml: масштаб 10000 против 20000"):
+        build.render(a)
+
+
+def test_compare_group_repeat_is_byte_identical_and_follows_neighbor(project, tmp_path, capsys, monkeypatch):
+    """Карта группы в двух процессах — байт в байт; смена описания соседа — новая сборка, не кеш."""
+    a, b = compare_pair(project, "rep-")
+    outputs = []
+    for run in ("1", "2"):
+        subprocess.run([sys.executable, "-c", RENDER, str(tmp_path / f"cache{run}"), str(a)], check=True)
+        outputs.append([(project / "maps" / f"rep-a{suffix}").read_bytes() for suffix in (".png", ".overlay.json")])
+    assert outputs[0] == outputs[1]
+    monkeypatch.setattr(build, "CACHE", tmp_path / "cache1")
+    build.render(a)
+    assert "из кеша" in capsys.readouterr().out
+    b.write_text(b.read_text(encoding="utf-8").replace("Школы у границы", "Школы у границы, вариант"),
+                 encoding="utf-8")
+    build.render(a)
+    assert "из кеша" not in capsys.readouterr().out

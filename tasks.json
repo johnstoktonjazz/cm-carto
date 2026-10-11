@@ -111,7 +111,7 @@
       "stage": 3,
       "title": "render: подложка растром и overlay.json в мм места (решение Романа, К-018); черновая схема до контракта overlay",
       "agent": "render-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T3.2"
       ]
@@ -121,13 +121,14 @@
       "stage": 3,
       "title": "три образца карт на полигоне в новом виде: подложка PNG + overlay.json + превью; листы — когда cm-deck примет overlay",
       "agent": "render-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "T3.4",
         "T1.2",
         "T2.1",
         "T4.1"
-      ]
+      ],
+      "note": "образцы собраны с пробной схемой image (reference); листы cm-deck — когда верстка примет overlay"
     },
     {
       "id": "T3.5",
@@ -155,7 +156,7 @@
       "stage": 3,
       "title": "контрольная точка К1: verifier, доклад",
       "agent": "verifier",
-      "status": "todo",
+      "status": "in_progress",
       "after": [
         "T3.3",
         "T1.3",

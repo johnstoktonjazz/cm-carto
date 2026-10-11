@@ -54,6 +54,7 @@
    "kind": "legend",
    "legend": [
     {"kind": "point", "role": "point_1", "symbol": "circle", "text": "Школы"},
+    {"kind": "point", "role": "point_2", "symbol": "circle", "text": "Детские сады"},
     {"kind": "polygon", "role": "reach_walk", "text": "15 минут пешком от станции"},
     {"kind": "point", "role": "stop", "symbol": "square", "text": "Железнодорожная станция"}
    ],
