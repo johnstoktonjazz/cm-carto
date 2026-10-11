@@ -1,0 +1,21 @@
+# К1, карта 3a: сравнение под макет compare (место square_small): школы и сады вокруг территории по двум источникам
+# (сверка источников, T2.4). Один охват, один масштаб, один набор ролей и подписей — одна легенда 91 мм на обе карты
+# (на листе — легенда карты 3a). После этапа анализа (T4.1) варианты — изохроны 5 и 10 минут пешком (reach_walk).
+place: square_small
+project: ../project.yaml
+center: [494700, 5228900]
+scale: 20000
+legend: 91
+layers:
+  point_1: {layer: poi_education, where: "poi_type = 'school' AND source_label LIKE 'OpenStreetMap%'", title: Школы}
+  point_2: {layer: poi_education, where: "poi_type = 'kindergarten' AND source_label LIKE 'OpenStreetMap%'", title: Детские сады}
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: По OpenStreetMap
+out: images/k1-compare-a.png

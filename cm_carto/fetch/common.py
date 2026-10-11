@@ -6,7 +6,6 @@ from functools import cache
 from pathlib import Path
 
 import geopandas as gpd
-import pandas as pd
 import shapely
 import yaml
 from shapely.ops import unary_union
@@ -46,6 +45,43 @@ def geometry_key(geom) -> str:
     return "g" + hashlib.sha256(shapely.to_wkb(shapely.set_precision(geom, 0.01))).hexdigest()[:12]
 
 
+def clip_areas(frame: gpd.GeoDataFrame, area) -> gpd.GeoDataFrame:
+    """Площадные объекты по охвату: целиком внутри остаются как есть, пересекающие границу обрезаются."""
+    frame = frame.copy()
+    frame["geometry"] = frame.geometry.make_valid()
+    frame = frame[frame.geometry.intersects(area)].copy()
+    inside = frame.geometry.within(area)
+    frame["geometry"] = [g if i else shapely.intersection(g, area) for g, i in zip(frame.geometry, inside)]
+    frame["geometry"] = [shapely.MultiPolygon([p for p in shapely.get_parts(g) if p.geom_type == "Polygon" and p.area > 0.01])
+                         for g in frame.geometry]
+    return frame[~frame.geometry.is_empty]
+
+
+def points(frame: gpd.GeoDataFrame, area) -> gpd.GeoDataFrame:
+    """Точки внутри охвата; площадной объект заменяется точкой на его поверхности."""
+    frame = frame.copy()
+    frame["geometry"] = [g if g.geom_type == "Point" else g.representative_point() for g in frame.geometry]
+    return frame[frame.geometry.within(area)]
+
+
+def disjoint(frame: gpd.GeoDataFrame, column: str, value: str) -> gpd.GeoDataFrame:
+    """Объекты со значением column == value не перекрывают друг друга: от более крупного отнимаются более мелкие
+    (море, залив и лиман в источнике лежат друг на друге)."""
+    frame = frame.copy()
+    taken = None
+    for index in frame[frame[column] == value].geometry.area.sort_values().index:
+        geom = frame.geometry[index]
+        frame.loc[index, "geometry"] = geom if taken is None else geom.difference(taken)
+        taken = geom if taken is None else taken.union(geom)
+    return frame[~frame.geometry.is_empty]
+
+
+def lines_of(geom):
+    """Линейные части результата обрезки в одну MultiLineString (точки и пустое отбрасываются)."""
+    parts = [g for g in shapely.get_parts(geom) if g.geom_type == "LineString" and g.length > 0.01]
+    return shapely.MultiLineString(parts) if parts else None
+
+
 def table(layer: str, rows: list[dict], crs) -> gpd.GeoDataFrame:
     """Слой из записей: key, name, kind, label, date, license, geometry и атрибуты слоя. Статус всех — reference."""
     columns = ["object_id", "name", "kind", "status", "source_label", "source_date", "source_license", "fact_ids"]
@@ -57,10 +93,6 @@ def table(layer: str, rows: list[dict], crs) -> gpd.GeoDataFrame:
                         "source_license": r["license"], "fact_ids": [], **{a: r.get(a) for a in attrs},
                         "geometry": r["geometry"]})
     frame = gpd.GeoDataFrame(records, columns=columns + attrs + ["geometry"], geometry="geometry", crs=crs)
-    for a in attrs:      # целые атрибуты с пропусками остаются целыми, а не вещественными
-        values = [r.get(a) for r in rows]
-        if any(v is not None for v in values) and all(v is None or (isinstance(v, int) and not isinstance(v, bool)) for v in values):
-            frame[a] = pd.Series(values, index=frame.index, dtype=object)
     return frame.sort_values("object_id", kind="stable").reset_index(drop=True)
 
 

@@ -1,0 +1,84 @@
+{
+  "file": "k1-analysis.png",
+  "kind": "map",
+  "title": "Школы, детские сады и больницы вокруг территории проекта планировки",
+  "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+  "date": "2026-10-11",
+  "status": "official",
+  "size_mm": {
+    "width": 251.88,
+    "height": 187.68
+  },
+  "dpi": 300,
+  "crs": "EPSG:32637",
+  "scale": "1:10 000",
+  "layers": [
+    {
+      "name": "Школы",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Детские сады",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Больницы и поликлиники",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Остановки",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Граница проекта планировки",
+      "source": "синтетический образец: проект планировки, чертеж красных линий",
+      "status": "official",
+      "date": "2026-10-11"
+    },
+    {
+      "name": "Магистральная улица",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Улица районного значения",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Железная дорога",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Озеленение",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Водные объекты",
+      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-09-23"
+    },
+    {
+      "name": "Кварталы",
+      "source": "синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+      "status": "reference",
+      "date": "2026-10-11"
+    }
+  ],
+  "legend_file": "k1-analysis-legend.svg"
+}

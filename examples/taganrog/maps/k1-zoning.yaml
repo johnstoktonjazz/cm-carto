@@ -1,0 +1,20 @@
+# К1, карта 2: карта зонирования на весь лист под макет image_full (место sheet, легенда внутри).
+# Центр сдвинут на северо-запад от территории: угол заголовка (map.yaml: places.sheet.clear) остается городу.
+place: sheet
+project: ../project.yaml
+center: [494650, 5228850]
+scale: 5000
+legend: inside
+layers:
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  zone_sanitary: {layer: zouit, where: "zouit_type = 'sanitary'"}
+  zoning: {layer: zones_pzz}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Территориальные зоны в границах проекта планировки
+out: images/k1-zoning.png

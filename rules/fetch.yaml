@@ -100,7 +100,12 @@ buildings:
   # building_use: subtype Overture / значение тега building в OSM, как в источнике
 
 green:
-  kind: озелененная территория
+  kind:
+    park: парк, сквер
+    forest: лес
+    garden: сад, огород, цветник
+    cemetery: кладбище
+    other: газон, луг, кустарник
   # класс land_use / land Overture -> green_class
   classes:
     park: park
@@ -118,7 +123,13 @@ green:
     shrub: other
 
 water:
-  kind: водный объект
+  kind:
+    sea: море, залив
+    river: река
+    lake: озеро, пруд
+    canal: канал, ров
+    reservoir: водохранилище
+    other: водный объект
   # класс base/water Overture -> water_class; остальные классы (бассейны, родники, мысы) не берутся
   classes:
     ocean: sea
@@ -217,6 +228,85 @@ poi:
     amenity=bank: [poi_other, bank, банк]
     amenity=police: [poi_other, police, полиция]
     amenity=place_of_worship: [poi_other, worship, культовое здание]
+
+# прямая выгрузка OSM (cm_carto/fetch/osm.py): теги -> значения контракта; первое совпавшее правило выигрывает
+osm:
+  license: ODbL 1.0
+  overpass_url: https://overpass-api.de/api/interpreter
+  overpass_timeout_s: 900
+  # теги, по которым запрашиваются элементы
+  tag_keys: [highway, railway, public_transport, building, leisure, landuse, natural, water, waterway, amenity,
+             tourism, shop]
+  stops:
+    highway=bus_stop: bus
+    amenity=bus_station: bus
+    railway=tram_stop: tram
+    railway=station: rail
+    railway=halt: rail
+    amenity=ferry_terminal: ferry
+  green:
+    leisure=park: park
+    leisure=recreation_ground: park
+    leisure=dog_park: park
+    leisure=garden: garden
+    landuse=flowerbed: garden
+    landuse=allotments: garden
+    landuse=cemetery: cemetery
+    amenity=grave_yard: cemetery
+    landuse=forest: forest
+    natural=wood: forest
+    landuse=grass: other
+    landuse=meadow: other
+    natural=grassland: other
+    natural=scrub: other
+  water:
+    water=river: river
+    water=stream: river
+    water=canal: canal
+    water=lake: lake
+    water=pond: lake
+    water=reservoir: reservoir
+    water=basin: reservoir
+    waterway=riverbank: river
+    waterway=canal: canal
+    landuse=reservoir: reservoir
+    landuse=basin: reservoir
+    natural=bay: sea
+    natural=water: other
+  # значение тега building -> building_use (как subtype в Overture); остальные значения -> пусто
+  building_use:
+    house: residential
+    detached: residential
+    semidetached_house: residential
+    terrace: residential
+    bungalow: residential
+    apartments: residential
+    residential: residential
+    dormitory: residential
+    industrial: industrial
+    warehouse: industrial
+    factory: industrial
+    commercial: commercial
+    retail: commercial
+    office: commercial
+    supermarket: commercial
+    school: education
+    kindergarten: education
+    university: education
+    college: education
+    hospital: medical
+    clinic: medical
+    church: religious
+    mosque: religious
+    cathedral: religious
+    chapel: religious
+    garage: outbuilding
+    garages: outbuilding
+    shed: outbuilding
+    civic: civic
+    public: civic
+    train_station: transportation
+    transportation: transportation
 
 blocks:
   kind: квартал по улично-дорожной сети

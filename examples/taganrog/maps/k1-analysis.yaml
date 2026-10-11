@@ -1,0 +1,23 @@
+# К1, карта 1: аналитическая карта под макет map_analysis (место landscape, легенда 123 мм).
+# Школы, детские сады и больницы вокруг территории проекта планировки; станции и остановки — для ориентира.
+# Изохроны 10 минут пешком добавятся ролью reach_walk из слоя isochrones после этапа анализа (T4.1).
+place: landscape
+project: ../project.yaml
+center: [494500, 5229000]
+scale: 10000
+legend: 123
+layers:
+  point_1: {layer: poi_education, where: "poi_type = 'school'", title: Школы}
+  point_2: {layer: poi_education, where: "poi_type = 'kindergarten'", title: Детские сады}
+  point_3: {layer: poi_health, where: "poi_type IN ('hospital', 'clinic')", title: Больницы и поликлиники}
+  stop: {layer: transit_stops, title: Остановки}
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  road_express: {layer: roads, where: "road_class = 'express'"}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Школы, детские сады и больницы вокруг территории проекта планировки
+out: images/k1-analysis.png
