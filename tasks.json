@@ -191,10 +191,11 @@
       "stage": 5,
       "title": "CLI, MCP, qgis-mcp, перенос на Mac",
       "agent": "mcp-dev",
-      "status": "todo",
+      "status": "done",
       "after": [
         "K1"
-      ]
+      ],
+      "note": "перенос проверен копией дерева в облаке; на Mac — pip install -e, OSM напрямую, реестры, qgis-mcp"
     }
   ]
 }
