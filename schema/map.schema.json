@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cm-carto/map/1.0.0",
+  "title": "Описание карты картографа (YAML): место макета, охват, слои-роли со слоями геопакета, легенда",
+  "version": "1.0.0",
+  "description": "Совместимо по смыслу с описанием карты верстки (cm_deck.qgis_render): те же place, center, scale, north, legend, layers.<роль>.title, out. Отличия: геопакет и система координат — из анкеты проекта (project, data), роль связана со слоем геопакета контракта geopackage и отбором (layer, where), источник, дата и статус в provenance собираются из данных, а не пишутся руками. Роли (ключи layers), места и ширины легенды — из cm-design/tokens/map.yaml, проверяются при загрузке.",
+  "type": "object",
+  "required": ["place", "project", "legend", "layers", "out"],
+  "additionalProperties": false,
+  "properties": {
+    "place": {
+      "type": "string",
+      "description": "место макета: ключ map.yaml: places; компоновка design/qgis/map_<место>.qpt, размер картинки — places.<место>.image"
+    },
+    "project": {
+      "type": "string",
+      "description": "анкета проекта project.yaml, путь от папки описания: система координат, папка геоданных"
+    },
+    "data": {
+      "type": "string",
+      "description": "геопакет проекта (контракт geopackage), путь от папки описания; по умолчанию <geo>/project.gpkg анкеты"
+    },
+    "crs": {
+      "type": "string",
+      "description": "необязательно, для описаний, перенесенных от верстки: должна совпасть с crs.name анкеты"
+    },
+    "center": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "центр карты [x, y] в системе координат проекта; вместе со scale"
+    },
+    "scale": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "знаменатель масштаба при печати в размер места; вместе с center"
+    },
+    "extent": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "охват [xmin, ymin, xmax, ymax] в системе координат проекта вместо center и scale: карта по центру охвата, масштаб — наименьший с двумя значащими цифрами, при котором охват виден целиком"
+    },
+    "north": {
+      "type": "boolean",
+      "description": "стрелка севера; по правилу MAPS.md, раздел 7: включена, если на карте нет подложки (в охвате нет объектов слоев уровня basemap). Задано и расходится с правилом — ошибка"
+    },
+    "legend": {
+      "type": ["integer", "string"],
+      "description": "ширина места легенды, мм (map.yaml: legend.widths; legend_<ширина>.qpt, отдельный файл SVG) или inside — легенда внутри карты (место из map.yaml: legend.inside.places)"
+    },
+    "layers": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "роль на карте (ключ map.yaml: layers или zoning) → слой геопакета и отбор. Порядок отрисовки и легенды — порядок стандарта, не порядок здесь",
+      "additionalProperties": {
+        "type": ["object", "null"],
+        "additionalProperties": false,
+        "properties": {
+          "layer": {
+            "type": "string",
+            "description": "слой геопакета (контракт geopackage); по умолчанию — имя роли"
+          },
+          "where": {
+            "type": "string",
+            "description": "отбор объектов слоя: условие SQL провайдера (subset string QGIS), например road_class = 'main'"
+          },
+          "title": {
+            "type": "string",
+            "description": "строка легенды и имя слоя в provenance; по умолчанию title роли из map.yaml"
+          }
+        }
+      }
+    },
+    "title": {
+      "type": "string",
+      "description": "подпись картинки, одна строка (image: title)"
+    },
+    "fact_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^(F-[0-9]{6}|CALC-[0-9]{5}|NORM-[0-9]{5}|ASM-[0-9]{4})$"},
+      "description": "записи реестра, которые карта показывает (image: fact_ids)"
+    },
+    "out": {
+      "type": "string",
+      "pattern": "\\.png$",
+      "description": "карта PNG, путь от папки описания; рядом <имя>-legend.svg и <имя>.provenance.json"
+    }
+  },
+  "oneOf": [
+    {"required": ["center", "scale"], "not": {"required": ["extent"]}},
+    {"required": ["extent"], "not": {"anyOf": [{"required": ["center"]}, {"required": ["scale"]}]}}
+  ]
+}

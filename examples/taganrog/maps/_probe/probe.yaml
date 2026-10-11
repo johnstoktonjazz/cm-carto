@@ -1,0 +1,20 @@
+# Пробная карта на частях fetch и ingest (render-dev): центр города, школы и остановки на подложке.
+# Перед рендером — слияние частей geo/parts/*.gpkg в geo/project.gpkg (cm_carto.gpkg.merge).
+# Рендер: scripts/run.sh python -c "from pathlib import Path; from cm_carto.render import build; build.render(Path('examples/taganrog/maps/_probe/probe.yaml'))"
+place: landscape
+project: ../../project.yaml
+center: [495457, 5228725]
+scale: 10000
+legend: 123
+layers:
+  point_1: {layer: poi_education, where: "poi_type = 'school'", title: Школы}
+  stop: {layer: transit_stops, title: Остановки}
+  territory: {layer: boundary_planning, title: Граница проекта планировки}
+  road_main: {layer: roads, where: "road_class = 'main'"}
+  road_district: {layer: roads, where: "road_class = 'district'"}
+  railway: {layer: rail, where: "rail_class = 'main' AND coalesce(tunnel, 0) = 0"}
+  green: {}
+  water: {}
+  blocks: {}
+title: Школы и остановки в центре города
+out: probe.png

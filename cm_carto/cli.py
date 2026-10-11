@@ -21,6 +21,9 @@ def main(argv=None) -> None:
     p = commands.add_parser("doctor", help="проверка окружения: QGIS без окна, шрифты, контракты, пробный рендер")
     p.add_argument("-o", "--out", type=Path, help="папка для пробной карты")
     p.set_defaults(func=doctor)
+    from cm_carto.render import cli as render_cli
+
+    render_cli.add_parser(commands)
     args = parser.parse_args(argv)
     sys.exit(args.func(args))
 
