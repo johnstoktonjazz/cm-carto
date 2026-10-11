@@ -143,10 +143,9 @@
     {
       "id": "T3.6",
       "stage": 3,
-      "title": "подгонка под overlay 1.1.0 и image 1.1.0 (reference, category, группы легенды, ссылка на overlay)",
+      "title": "рендер по overlay 1.1.0 и image 1.1.0 (К-034, К-036)",
       "agent": "render-dev",
-      "status": "blocked",
-      "blocked_by": "решение Романа и верстки по докладу 2",
+      "status": "done",
       "after": [
         "T3.5"
       ]
@@ -196,6 +195,19 @@
         "K1"
       ],
       "note": "перенос проверен копией дерева в облаке; на Mac — pip install -e, OSM напрямую, реестры, qgis-mcp"
+    },
+    {
+      "id": "K2",
+      "stage": 5,
+      "title": "контрольная точка К2: verifier, исправления, доклад",
+      "agent": "verifier",
+      "status": "in_progress",
+      "after": [
+        "T4.2",
+        "T5.1",
+        "T3.6"
+      ],
+      "note": "verifier: готова с условием; исправляются: сборка с чистого клона, qgz без слоев в памяти, источники CALC, ASM у изохрон"
     }
   ]
 }
