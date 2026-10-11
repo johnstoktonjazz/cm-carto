@@ -19,7 +19,7 @@ from shapely import affinity
 from shapely.geometry import LineString, Point, Polygon, box
 
 from cm_carto import gpkg, paths, tokens
-from cm_carto.render import build, deck_overlay, overlay, spec as spec_file
+from cm_carto.render import build, overlay, spec as spec_file
 
 CRS_NAME = "EPSG:32637"
 X, Y = 500000, 5000000
@@ -461,8 +461,7 @@ def test_caption_merges_one_provider():
 
 
 def test_legend_groups_from_nine_rows(project):
-    """11 строк (зоны — по строке на категорию) — группы по уровням map.yaml: levels, строка kind: group; переводчик
-    для верстки их пропускает, а ее раскладка ставит те же заголовки."""
+    """11 строк (зоны — по строке на категорию) — группы по уровням map.yaml: levels, строка kind: group."""
     layers = {"point_1": {"layer": "poi_education", "where": "poi_type = 'school'", "title": "Школы"},
               "reach_walk": {"layer": "isochrones", "title": "10 минут пешком"},
               "territory": {"layer": "boundary_planning"}, "zone_sanitary": {"layer": "zouit"},
@@ -475,5 +474,3 @@ def test_legend_groups_from_nine_rows(project):
     assert [(r["role"], r["text"]) for r in groups] == [(k, std["levels"][k]["title"]) for k in ("analysis", "boundaries")]
     assert len(rows) - len(groups) == 11 and rows[0]["kind"] == "group"
     assert [r["category"] for r in rows if r["role"] == "zoning"] == ["Ж", "ОЖ", "ОД", "П", "ИТ", "Р", "СН"]
-    out = deck_overlay.translate(doc)
-    assert len(out["legend"]) == 11 and out["legend"][-1]["layer"] == "zoning:СН"

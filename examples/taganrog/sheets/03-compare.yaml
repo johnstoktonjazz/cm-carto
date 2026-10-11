@@ -6,17 +6,11 @@ places:
   legend: {layers_of: image_1}
   image_1:
     file: ../maps/images/k1-compare-a.png
-    overlay: ../maps/images/k1-compare-a.deck-overlay.json
-    kind: карта
-    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0
-    date: "09.2026"
+    overlay: ../maps/images/k1-compare-a.overlay.json
     caption: От станции Таганрог-II
   image_2:
     file: ../maps/images/k1-compare-b.png
-    overlay: ../maps/images/k1-compare-b.deck-overlay.json
-    kind: карта
-    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0
-    date: "09.2026"
+    overlay: ../maps/images/k1-compare-b.overlay.json
     caption: От станции Таганрог-Пассажирский
   table_1:
     columns:
@@ -41,6 +35,6 @@ sources:
 notes: >
   Образец К1, карта 3: сравнение двух карт одного масштаба (1:30 000, место square_small) с одной легендой
   (compare_with, легенды двух overlay совпадают). cm-carto render по examples/taganrog/maps/k1-compare-a.yaml
-  и k1-compare-b.yaml; *.deck-overlay.json — временный перевод overlay.json для cm-deck. Счет школ и садов —
+  и k1-compare-b.yaml; overlay.json верстка читает напрямую, подписи карт — из provenance. Счет школ и садов —
   объекты на карте внутри изохроны walk-15 от станции; площадь и длина улиц — analysis-isochrones.calc.yaml
   (status check). CALC-00011…00018 — условные идентификаторы: базы знаний у полигона нет.

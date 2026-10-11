@@ -5,14 +5,11 @@ places:
   subtitle: Северо-запад территории — в санитарно-защитной зоне
   image_1:
     file: ../maps/images/k1-zoning.png
-    overlay: ../maps/images/k1-zoning.deck-overlay.json
-    kind: карта
-    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0
-    date: "09.2026"
+    overlay: ../maps/images/k1-zoning.overlay.json
 sources:
   - "Кадастровый план территории SYN-KPT-0001 и проект планировки: синтетические образцы картографа, данные вымышлены, 10.2026"
 notes: >
   Образец К1, карта 2: главная карта раздела, макет image_page (image_full верстка сняла, К-02, Д-048), место wide,
-  легенда внутри, 1:5 000. cm-carto render по examples/taganrog/maps/k1-zoning.yaml; k1-zoning.deck-overlay.json —
-  временный перевод overlay.json для cm-deck. Зоны и ЗОУИТ — из синтетической КПТ (cadastral), граница — из
+  легенда внутри, 1:5 000. cm-carto render по examples/taganrog/maps/k1-zoning.yaml; overlay.json
+  верстка читает напрямую, подпись карты — из provenance. Зоны и ЗОУИТ — из синтетической КПТ (cadastral), граница — из
   синтетического чертежа проекта планировки (official). Граница — цветом текста (К-05).

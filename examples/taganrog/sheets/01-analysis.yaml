@@ -20,10 +20,7 @@ places:
     fact_ids: [ASM-0001]
   image_1:
     file: ../maps/images/k1-analysis.png
-    overlay: ../maps/images/k1-analysis.deck-overlay.json
-    kind: карта
-    source: OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0
-    date: "09.2026"
+    overlay: ../maps/images/k1-analysis.overlay.json
     caption: Объекты счета внутри изохроны
 sources:
   - "Overture Maps, выпуск 2026-09-23.0: улицы, железная дорога, вода, озеленение, кварталы, учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0)"
@@ -31,7 +28,6 @@ sources:
 notes: >
   Образец К1, карта 1: аналитическая карта на полигоне (Таганрог). Подложка, provenance и overlay.json (контракт
   overlay 1.1.0) — cm-carto render по examples/taganrog/maps/k1-analysis.yaml (место landscape, легенда 123 мм,
-  1:11 000); k1-analysis.deck-overlay.json — временный перевод для cm-deck (cm_carto/render/deck_overlay.py), пока
-  верстка разбирает свой черновой формат. Счет — число объектов на карте внутри изохроны walk-10 от границы ППТ
+  1:11 000); overlay.json верстка читает напрямую. Подпись карты — из provenance. Счет — число объектов на карте внутри изохроны walk-10 от границы ППТ
   (analysis-isochrones), status check. Расстояние до ближайшего не считалось — «необходим расчет», значения нет (без status).
   CALC-00001…00006 и ASM-0001 — условные идентификаторы: базы знаний у полигона нет.

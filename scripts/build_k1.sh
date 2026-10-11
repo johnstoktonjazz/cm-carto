@@ -2,7 +2,7 @@
 # Контрольная точка К1 на полигоне, полный путь с чистого клона: выгрузка Overture (если части нет; из кеша
 # inputs/cache, без кеша — с сети) → изохроны, которые называют описания карт (если части нет или ее input_hash
 # устарел) → project.gpkg из частей → четыре карты (подложка PNG + provenance по контракту image + overlay.json по
-# контракту overlay + превью) → временный перевод overlay для cm-deck → три листа cm-deck → линтер верстки → рендер
+# контракту overlay + превью) → три листа cm-deck → линтер верстки → рендер
 # PNG/PDF → контактный лист → копия листов, рендера и отчета линтера в examples/taganrog/sheets/out/.
 # Части ingest-* — в git (К-023); части fetch-* и analysis-* — нет, их собирает этот скрипт.
 # Запуск из любого места: scripts/build_k1.sh
@@ -90,11 +90,6 @@ for name in ("k1-analysis", "k1-zoning", "k1-compare-a", "k1-compare-b"):
     for path in build.render(Path("$EX/maps") / f"{name}.yaml", preview=True):
         print(path.relative_to(Path("$ROOT")))
 PY
-
-# ВРЕМЕННО, до перехода cm-deck на контракт overlay: перевод в черновой формат cm_deck/overlay.py;
-# удалить вместе с cm_carto/render/deck_overlay.py.
-echo "== перевод overlay для cm-deck (временно)"
-"$RUN" python -m cm_carto.render.deck_overlay "$EX"/maps/images/k1-*.overlay.json
 
 echo "== зеркало верстки"
 rm -rf "$MIRROR" && mkdir -p "$MIRROR/input"
