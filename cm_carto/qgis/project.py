@@ -18,16 +18,15 @@ from cm_carto.render import build, spec as spec_file
 EVERYWHERE = QgsRectangle(-1e9, -1e9, 1e9, 1e9)
 
 
-def linked(spec, role, copy: QgsVectorLayer) -> QgsVectorLayer:
+def linked(spec, role, copy: QgsVectorLayer, subset: str) -> QgsVectorLayer:
     """Подложка в проекте — ссылка на слой геопакета (а не копия в памяти, которая после открытия .qgz пуста): тот же
-    отбор объектов (fid копии равны fid геопакета), стиль и подпись. Подпись — выражение QGIS: замена «ё» на «е»;
+    тот же итоговый отбор объектов (`subset` исходного слоя рендера), стиль и подпись. Подпись — выражение QGIS: замена «ё» на «е»;
     остальные правила `labels.name` (кавычки, «№», пробелы) выражением не повторяются, на подложке они видны только
     в рендере."""
     options = QgsVectorLayer.LayerOptions(QgsProject.instance().transformContext())
     options.forceReadOnly = True
     layer = QgsVectorLayer(f"{spec.data}|layername={role.layer}", copy.name(), "ogr", options)
-    ids = ",".join(str(f.id()) for f in copy.getFeatures()) or "-1"
-    layer.setSubsetString(f"({role.where}) AND fid IN ({ids})" if role.where else f"fid IN ({ids})")
+    layer.setSubsetString(subset)
     layer.setRenderer(copy.renderer().clone())
     labeling = copy.labeling()
     if labeling is not None:
@@ -52,9 +51,15 @@ def build_project(path: Path, out: Path | None = None) -> Path:
     project.setFilePathStorage(Qgis.FilePathType.Relative)
     layers = []
     for role in spec.roles:
-        layer = build.vector(spec, std, role, EVERYWHERE).layer
+        subsets = []  # итоговый отбор исходного слоя: рендер подменяет его копией в памяти (fid копии другие)
+        original = build.basemap_copy
+        build.basemap_copy = lambda src, field: subsets.append(src.subsetString()) or original(src, field)
+        try:
+            layer = build.vector(spec, std, role, EVERYWHERE).layer
+        finally:
+            build.basemap_copy = original
         if layer.providerType() == "memory":
-            layer = linked(spec, role, layer)
+            layer = linked(spec, role, layer, subsets[0])
         layer.setReadOnly(True)  # в проекте слой не редактируется: правки в QGIS в выпуск не идут
         project.addMapLayer(layer, False)
         project.layerTreeRoot().addLayer(layer)
