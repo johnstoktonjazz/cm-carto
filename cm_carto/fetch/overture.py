@@ -165,10 +165,32 @@ def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, relea
         geom = common.lines_of(shapely.intersection(shapely.line_merge(shapely.MultiLineString(group["lines"])), area))
         if geom is None:
             continue
-        rows.append({"key": key + ("-t" if tunnel else ""), "name": group["name"], "kind": rule["kind"][group["value"]],
+        rows.append({"key": key + ("-t" if tunnel else ""), "name": group["name"], "kind": None,
                      "label": group["label"], "date": date, "license": group["license"], "geometry": geom,
                      attr: group["value"], "tunnel": tunnel})
+    if layer == "rail":
+        parallel_sidings(rows, attr)
+    for row in rows:
+        row["kind"] = rule["kind"][row[attr]]
     return common.table(layer, rows, segments.crs)
+
+
+def parallel_sidings(rows: list, attr: str) -> None:
+    """В Overture нет тега service: станционные и подъездные пути отличить можно только по геометрии.
+    Наземный путь класса main, идущий вдоль более длинного пути main (покрытие буфером rail.parallel.distance_m
+    не меньше rail.parallel.share его длины), становится siding. Из пучка параллельных путей остается самый длинный."""
+    rule = rules()["rail"]["parallel"]
+    main = [r for r in rows if r[attr] == "main" and not r["tunnel"]]
+    main.sort(key=lambda r: (-r["geometry"].length, r["key"]))      # длиннее - раньше; при равенстве - по ключу
+    tree = shapely.STRtree([r["geometry"] for r in main])
+    for i, row in enumerate(main):
+        line = row["geometry"]
+        near = [j for j in tree.query(line, predicate="dwithin", distance=rule["distance_m"]) if j < i]
+        if not near:
+            continue
+        zone = shapely.union_all([main[j]["geometry"].buffer(rule["distance_m"]) for j in near])
+        if shapely.intersection(line, zone).length >= rule["share"] * line.length:
+            row[attr] = "siding"
 
 
 def polygons(frame: gpd.GeoDataFrame, layer: str, release: str, area, date: str, attrs, names: common.Names) -> gpd.GeoDataFrame:

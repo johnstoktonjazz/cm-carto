@@ -73,7 +73,10 @@ rail:
     siding: станционный и подъездной путь
     tram: трамвайная линия
     subway: метрополитен
-  siding_service: [siding, yard, spur]       # OSM: railway=rail + service=... -> siding (только прямая выгрузка)
+  siding_service: [siding, yard, spur, crossover]   # OSM: railway=rail + service=... -> siding (прямая выгрузка)
+  # Overture тега service не несет (subclass пуст, rail_flags только мост/тоннель/перекрытие): станционные и подъездные
+  # пути там определяются геометрией. Путь main, идущий вдоль более длинного пути main, становится siding.
+  parallel: {distance_m: 12, share: 0.5}
 
 transit_stops:
   # класс инфраструктуры Overture (base/infrastructure, subtype transit) -> mode; другие классы не берутся

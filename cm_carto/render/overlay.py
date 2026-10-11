@@ -1,24 +1,34 @@
-"""Слои данных карты по контракту overlay 1.0.0 (cm-contracts/contracts/overlay): все, что на карте кроме подложки,
+"""Слои данных карты по контракту overlay 1.1.0 (cm-contracts/contracts/overlay): все, что на карте кроме подложки,
 в миллиметрах места макета — верстка рисует это фигурами и текстом PowerPoint.
 
 Координаты — мм от левого верхнего угла места, y вниз. Контуры обрезаны по рамке места, упрощены (Дуглас — Пекер,
 SIMPLIFY_MM) и привязаны к сетке ROUND_MM; кольца с дырами сохраняются; составной объект — по фиче на часть с одним
-id (object_id). Цветов, толщин и кеглей в файле нет: стиль — по role из map.yaml верстки.
+id (object_id); у фичи — status и fact_ids объекта из геопакета. Цветов, толщин и кеглей в файле нет: стиль — по
+role из map.yaml верстки.
 
-Как имена совпадают с map.yaml (confirm 1 контракта): role слоя данных — ключ map.yaml: layers; зоны ПЗЗ — слой на
-категорию, role «zoning.<категория>», id «zoning_<транслит>»; size_role подписи — ключ map.yaml: text.styles;
-symbol — map.yaml: layers.<роль>.marker.shape; служебные слои — role legend, scale_bar, north_arrow.
+Как имена совпадают с map.yaml: role слоя данных — ключ map.yaml: layers; зоны ПЗЗ — слой на категорию, role
+«zoning», category у фичи и строки легенды, id «zoning_<транслит>»; size_role подписи — ключ map.yaml: text.styles;
+symbol — map.yaml: layers.<роль>.marker.shape; служебные слои — role legend, scale_bar, north_arrow; place.name —
+ключ map.yaml: places. Легенда с map.yaml: legend.groups_from строк — группами по уровням (строка kind: group).
+
+Площадные слои с заливкой или штриховкой уровня boundaries (зоны ПЗЗ, ограничения) — без улиц подложки: из них
+вырезается полоса по классу улицы (cut, строится в build.py) до упрощения. Линии и контуры без заливки, знаки,
+линейка, легенда внутри и север — места, которые подписи подложки обходят (blockers: build.py передает их движку
+подписей QGIS до экспорта подложки).
 
 Подписи расставляет картограф (верстка их не двигает): по правилу стиля роли (max_features, min_size), позиции
 вокруг знака в порядке стилей верстки (справа сверху, слева сверху, справа снизу, слева снизу, справа, слева) с
 отступом text.placement.distance от края знака; подпись не задевает другие подписи, подписи подложки, знаки,
 границу территории, линейку, север, легенду внутри и край места. Не встала — отнесена с выноской (leader_to); не встала и так — в лог.
 Размер текста — по метрике шрифта из style.yaml: font.files (кегль text.styles, перенос text.wrap_chars).
-Текст подписи — по TEXT.md верстки (labels.clean, правила rules/labels.yaml).
+Текст подписи — по TEXT.md верстки (labels.clean, правила rules/labels.yaml); перенос не отрывает предлог, сокращение
+и слово из rules/labels.yaml: keep_with_next от следующего слова (text.yaml: nbsp верстки).
 """
 
+import itertools
 import json
 import math
+import re
 from functools import cache
 
 import jsonschema
@@ -27,8 +37,9 @@ from PIL import ImageFont
 from shapely import affinity
 from shapely.geometry import LineString, Point, box
 
-from cm_carto import paths
-from cm_carto.render.labels import clean as clean_label
+from cm_carto import paths, tokens
+from cm_carto.render import labels as label_rules
+from cm_carto.render.labels import NBSP, clean as clean_label
 
 SIMPLIFY_MM = 0.1
 ROUND_MM = 0.01
@@ -45,6 +56,9 @@ ANCHOR = {"nw": (0, 0), "n": (0.5, 0), "ne": (1, 0), "w": (0, 0.5), "c": (0.5, 0
           "sw": (0, 1), "s": (0.5, 1), "se": (1, 1)}
 LEADER_STEPS = [3.0, 6.0]  # относ подписи с выноской, мм сверх обычного отступа
 CENTROID_GRID_MM = 2.0    # шаг запасных точек подписи площади внутри контура
+BLOCK_STEP_MM = 2.0       # линии overlay для подписей подложки — куски не длиннее (как line_obstacles верстки)
+BLOCK_MARGIN_MM = 0.4     # запас вокруг линии сверх половины толщины
+GLUE = "\u2060"           # временная склейка слов при переносе (WORD JOINER), в текст не попадает
 TRANSLIT = dict(zip("абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
                     ["a", "b", "v", "g", "d", "e", "e", "zh", "z", "i", "i", "k", "l", "m", "n", "o", "p", "r", "s",
                      "t", "u", "f", "kh", "ts", "ch", "sh", "shch", "", "y", "", "e", "iu", "ia"]))
@@ -101,6 +115,11 @@ def shape(part) -> dict:
 
 
 @cache
+def text_tokens() -> dict:
+    return tokens.load("text")
+
+
+@cache
 def font(path: str) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(path, METRIC_PX)
 
@@ -117,14 +136,26 @@ class Measure:
         return font(str(path)), text["size"] * PT_MM
 
     def wrap(self, text: str) -> str:
-        """Перенос по словам, строка не длиннее text.wrap_chars знаков (как autoWrapLength стилей верстки)."""
+        """Перенос по словам, строка не длиннее text.wrap_chars знаков (как autoWrapLength стилей верстки). Не делят
+        строку: неразрывный пробел («№ 20»), пробел после предлога, союза и сокращения (text.yaml: nbsp.after,
+        abbreviations), перед тире (nbsp.before) и после слова rules/labels.yaml: keep_with_next («имени Чехова»)."""
         limit, lines = self.std["text"]["wrap_chars"], []
-        for word in text.split(" "):  # неразрывный пробел («№ 20») не делит строку
+        nbsp = text_tokens()["nbsp"]
+        after = {w.casefold() for w in [*nbsp["after"], *nbsp["abbreviations"],
+                                        *label_rules.rules().get("keep_with_next", [])]}
+        before = set(nbsp["before"])
+        words = []
+        for word in text.split(" "):
+            if words and (re.split(f"[{NBSP}{GLUE}]", words[-1])[-1].casefold() in after or word in before):
+                words[-1] += GLUE + word
+            else:
+                words.append(word)
+        for word in words:
             if lines and len(lines[-1]) + 1 + len(word) <= limit:
                 lines[-1] += " " + word
             else:
                 lines.append(word)
-        return "\n".join(lines)
+        return "\n".join(lines).replace(GLUE, " ")
 
     def size(self, text: str, style_key: str) -> tuple[float, float]:
         f, size = self.font(style_key)
@@ -172,12 +203,14 @@ class Overlay:
         self.measure = Measure(std, style)
         self.plate = (std["text"]["plate"]["padding_x"], std["text"]["plate"]["padding_y"])
         self.obstacles: list = []      # знаки, граница территории, линейка, север, легенда внутри
+        self.blockers: list = []       # куски линий и контуров без заливки: их обходят подписи подложки
         self.placed: list = []         # подписи
         self.unplaced: list[str] = []
 
     # Слои данных
 
-    def data_layer(self, layer_id: str, role: str, kind: str, rows: list[dict], entry: dict, spec_role: dict) -> dict:
+    def data_layer(self, layer_id: str, role: str, kind: str, rows: list[dict], entry: dict, spec_role: dict,
+                   category: str | None = None) -> dict:
         features = []
         for row in sorted(rows, key=lambda r: r["object_id"]):
             for part in parts(row["mm"]):
@@ -187,6 +220,10 @@ class Overlay:
                 feature |= shape(part)
                 if kind == "point":
                     feature["symbol"] = spec_role["marker"]["shape"]
+                if category is not None:
+                    feature["category"] = category
+                feature["status"] = row["status"]
+                feature["fact_ids"] = sorted(json.loads(row["fact_ids"] or "[]"))
                 features.append(feature)
         layer = {"id": layer_id, "role": role, "kind": kind, "source_label": entry["source"], "status": entry["status"],
                  "fact_ids": sorted({f for row in rows for f in json.loads(row["fact_ids"] or "[]")})}
@@ -194,20 +231,23 @@ class Overlay:
             layer["simplify_mm"] = SIMPLIFY_MM
         return layer | {"features": features}
 
-    def data_layers(self, drawn: list, entries: dict) -> list[dict]:
-        """Слои ролей уровней analysis, objects, boundaries снизу вверх (обратный порядок стандарта)."""
+    def data_layers(self, drawn: list, entries: dict, cut=None) -> list[dict]:
+        """Слои ролей уровней analysis, objects, boundaries снизу вверх (обратный порядок стандарта). cut — полосы улиц
+        подложки в системе проекта: вычитаются из площадей с заливкой или штриховкой (cuts_streets) до упрощения."""
         layers = []
         for d in reversed(drawn):
+            carve = cut is not None and not cut.is_empty and cuts_streets(d.spec)
             for row in d.rows:
-                row["mm"] = geometry_mm(row["geom"], self.matrix, self.frame)
+                geom = row["geom"].difference(cut) if carve else row["geom"]
+                row["mm"] = geometry_mm(geom, self.matrix, self.frame)
             rows = [row for row in d.rows if not row["mm"].is_empty]
             kind = d.spec["geometry"]
             if d.role.key == "zoning":
                 field = self.std["zoning"]["field"]
                 for value, _ in d.categories():
                     part = [row for row in rows if row[field] == value]
-                    layers.append(self.data_layer(ident(f"zoning_{value}"), f"zoning.{value}", kind, part,
-                                                  entries[d.role.key], d.spec))
+                    layers.append(self.data_layer(ident(f"zoning_{value}"), "zoning", kind, part,
+                                                  entries[d.role.key], d.spec, category=value))
             else:
                 layers.append(self.data_layer(d.role.key, d.role.key, kind, rows, entries[d.role.key], d.spec))
             if kind == "point":
@@ -217,6 +257,8 @@ class Overlay:
             if d.role.key == "territory":
                 self.obstacles += [LineString(ring.coords) for row in rows for p in parts(row["mm"])
                                    for ring in [p.exterior, *p.interiors]]
+            if "stroke" in d.spec and (kind == "line" or not {"fill", "hatch", "categories"} & set(d.spec)):
+                self.blockers += line_blocks(rows, d.spec["stroke"]["width"])
         return layers
 
     # Служебные слои
@@ -228,9 +270,10 @@ class Overlay:
         for role, spec_role, categories in items:
             kind = spec_role["geometry"]
             if role.key == "zoning":
-                rows += [{"role": f"zoning.{value}", "kind": kind, "text": title} for value, title in categories]
+                rows += [{"role": "zoning", "kind": kind, "category": value, "text": title, "level": role.level}
+                         for value, title in categories]
                 continue
-            row = {"role": role.key, "kind": kind, "text": role.title}
+            row = {"role": role.key, "kind": kind, "text": role.title, "level": role.level}
             if kind == "point":
                 row["symbol"] = spec_role["marker"]["shape"]
             rows.append(row)
@@ -239,18 +282,34 @@ class Overlay:
             raise ValueError("в легенде нет строк: на карте только подложка")
         if len(rows) > rule["max_items"]:
             raise ValueError(f"в легенде {len(rows)} строк, предел {rule['max_items']}: делить карту (map.yaml: legend)")
-        if len(rows) >= rule["groups_from"]:
-            raise ValueError(f"в легенде {len(rows)} строк: с {rule['groups_from']} строк — группы по уровням, "
-                             f"а у overlay 1.0.0 нет строки-заголовка группы (вопрос к контракту)")
+        grouped = len(rows) >= rule["groups_from"]  # MAPS.md, 6: с groups_from строк — группы по уровням
+        out, level = [], None
+        for row in rows:
+            if grouped and row["level"] != level:
+                level = row["level"]
+                out.append({"role": level, "kind": "group", "text": self.std["levels"][level]["title"]})
+            out.append({k: v for k, v in row.items() if k != "level"})
+        rows = out
         sources = []
         for entry in entries.values():
             sources += [s for s in entry["source"].split("; ") if s not in sources]
         layer = {"id": "legend", "role": "legend", "kind": "legend", "source_label": "; ".join(sources), "legend": rows}
         if self.spec.legend == "inside":  # левый верхний угол плашки; низ — по точке элемента legend компоновки
             inside = rule["inside"]
-            height = len(rows) * rule["swatch"][1] + (len(rows) - 1) * rule["item_gap"] + 2 * inside["padding"]
-            width = rule["swatch"][0] + rule["swatch_text_gap"] + max(
-                self.measure.size(row["text"], rule["text"])[0] for row in rows) + 2 * inside["padding"]
+            # Раскладка как у верстки (cm_deck/overlay.py: _legend_items): строка — max(интерлиньяж, образец),
+            # заголовок группы — интерлиньяж своего кегля, между группами group_gap.
+            leading = {key: self.style["leading"][self.std["text"]["styles"][rule[key]]["size"]] / 72 * 25.4
+                       for key in ("text", "group_text")}
+            height, width = 2 * inside["padding"] - rule["item_gap"], 0.0
+            for n, row in enumerate(rows):
+                if row["kind"] == "group":
+                    height += (rule["group_gap"] if n else 0) + leading["group_text"] + rule["item_gap"]
+                    width = max(width, self.measure.size(row["text"], rule["group_text"])[0])
+                else:
+                    height += max(leading["text"], rule["swatch"][1]) + rule["item_gap"]
+                    width = max(width, rule["swatch"][0] + rule["swatch_text_gap"]
+                                + self.measure.size(row["text"], rule["text"])[0])
+            width += 2 * inside["padding"]
             x0, y0, x1, y1 = element_box(self.layout.itemById("legend"), (width, height))
             layer["legend_at"] = xy((x0, y0))
             self.obstacles.append(box(x0, y0, x1, y1))
@@ -277,11 +336,11 @@ class Overlay:
                 "scalebar": {"at": xy(at), "segments_m": segments, "segment_mm": mm(segment)}}
 
     def north_layer(self) -> dict:
-        """Стрелка севера: at — левый верхний угол знака размера map.yaml: north_arrow.size."""
+        """Стрелка севера: at — правый нижний угол знака размера map.yaml: north_arrow.size (overlay 1.1.0)."""
         x0, y0, x1, y1 = element_box(self.layout.itemById("north"), self.std["north_arrow"]["size"])
         self.obstacles.append(box(x0, y0, x1, y1))
         return {"id": "north_arrow", "role": "north_arrow", "kind": "north", "source_label": "север вверху",
-                "features": [{"id": "north_arrow", "at": xy((x0, y0))}]}
+                "features": [{"id": "north_arrow", "at": xy((x1, y1))}]}
 
     # Подписи
 
@@ -297,7 +356,7 @@ class Overlay:
         placement = rule.get("placement", self.std["text"]["placement"][d.spec["geometry"]])
         geom = row["mm"]
         if placement == "along":
-            raise ValueError(f"роль {d.role.key}: подпись вдоль линии overlay 1.0.0 не выражает (нет угла)")
+            raise ValueError(f"роль {d.role.key}: подпись вдоль линии overlay 1.1.0 не выражает (нет угла)")
         if placement == "center":  # номер в знаке точки
             candidates = [((geom.x, geom.y), "c", None)]
         elif placement == "centroid":  # внутри контура: точка на поверхности, затем ближайшие к ней узлы сетки
@@ -352,16 +411,43 @@ class Overlay:
         return list(reversed(layers))
 
 
+def cuts_streets(spec_role: dict) -> bool:
+    """Из площади вырезаются улицы подложки: заливка или штриховка уровня boundaries (зоны ПЗЗ, ограничения)."""
+    return spec_role["geometry"] == "polygon" and spec_role["level"] == "boundaries" \
+        and bool({"fill", "hatch", "categories"} & set(spec_role))
+
+
+def line_blocks(rows: list[dict], width: float) -> list:
+    """Прямоугольники вдоль линий и контуров, мм: куски до BLOCK_STEP_MM с запасом половины толщины и BLOCK_MARGIN_MM
+    (как line_obstacles верстки): подписи подложки не идут под изохрону и границу."""
+    half = width / 2 + BLOCK_MARGIN_MM
+    out = []
+    for row in rows:
+        for part in parts(row["mm"]):
+            lines = [part.exterior, *part.interiors] if part.geom_type == "Polygon" else [part]
+            for line in lines:
+                for (x0, y0), (x1, y1) in itertools.pairwise(line.coords):
+                    n = max(1, math.ceil(math.hypot(x1 - x0, y1 - y0) / BLOCK_STEP_MM))
+                    for k in range(n):
+                        ax, ay = x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n
+                        bx, by = x0 + (x1 - x0) * (k + 1) / n, y0 + (y1 - y0) * (k + 1) / n
+                        out.append(box(min(ax, bx) - half, min(ay, by) - half, max(ax, bx) + half, max(ay, by) + half))
+    return out
+
+
 def build(spec, std: dict, style: dict, drawn: list, legend_items: list, entries: dict, north: bool, layout, rect,
-          basemap: str, basemap_labels: list) -> tuple[dict, list[str]]:
+          basemap: str, raster, cut=None) -> tuple[dict, list[str]]:
     """overlay.json по контракту и подписи, которые не встали без наездов. legend_items — строки легенды
-    (build.legend); basemap_labels — рамки подписей подложки в мм: подписи overlay их не задевают."""
+    (build.legend); cut — полосы улиц (вычитаются из зон). raster(blockers) рисует подложку, обходя подписями
+    blockers (рамки x0, y0, x1, y1 в мм: линии без заливки, знаки, линейка, север, легенда внутри), и возвращает
+    рамки своих подписей в мм — подписи overlay их не задевают."""
     data = [d for d in drawn if d.role.level != "basemap"]
     o = Overlay(spec, std, style, layout, rect)
-    o.obstacles += [box(*r) for r in basemap_labels]
-    layers = o.data_layers(data, entries)
+    layers = o.data_layers(data, entries, cut)
     service = [o.scale_bar_layer()] + ([o.north_layer()] if north else [])
     legend = o.legend_layer(legend_items, entries)
+    blockers = [b.bounds for b in o.blockers + [x for x in o.obstacles if x.geom_type == "Polygon"]]
+    o.obstacles += [box(*r) for r in raster(sorted(blockers))]
     labels = o.label_layers(data, entries)
     xmin, ymin, xmax, ymax = rect
     doc = {"basemap": basemap,

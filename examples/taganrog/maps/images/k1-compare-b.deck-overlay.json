@@ -1690,11 +1690,23 @@
   },
   {
    "kind": "text",
+   "id": "transit_stops.osm-n9683398095-2",
+   "layer": "stop",
+   "at_mm": [
+    47.67,
+    37.97
+   ],
+   "text": "Таганрог-Пассажирский",
+   "anchor": "l",
+   "style": "label"
+  },
+  {
+   "kind": "text",
    "id": "poi_education.osm-w126696975-2",
    "layer": "point_2",
    "at_mm": [
     33.25,
-    68.46
+    60.12
    ],
    "text": "Детский сад № 52",
    "anchor": "r",
@@ -1741,7 +1753,7 @@
   {
    "name": "reach_walk",
    "source": "расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0 от 2026-09-23, 4,8 км/ч, ODbL 1.0",
-   "status": "reference"
+   "status": "calc"
   },
   {
    "name": "point_2",

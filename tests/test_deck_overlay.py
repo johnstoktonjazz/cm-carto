@@ -46,7 +46,8 @@ def test_samples_pass_deck_check(deck, path):
     data = [f for layer in doc["layers"] if layer["kind"] in deck_overlay.DATA_KINDS for f in layer["features"]]
     assert len([e for e in out["elements"] if e["kind"] in ("polygon", "polyline", "point")]) == len(data)
     legend = next(layer for layer in doc["layers"] if layer["kind"] == "legend")
-    assert [row["label"] for row in out["legend"]] == [row["text"] for row in legend["legend"]]
+    assert [row["label"] for row in out["legend"]] == [row["text"] for row in legend["legend"]
+                                                       if row.get("kind") != "group"]
     assert out["legend_inside"] == ("legend_at" in legend)
 
 
@@ -82,8 +83,7 @@ def test_leader_multiline_north(deck):
     std = tokens.load("map")
     step = rest[-1]["at_mm"][1] - callout["to_mm"][1]
     assert step == pytest.approx(std["text"]["styles"][two["size_role"]]["size"] * 1.362 * 25.4 / 72, abs=0.02)
-    w, h = std["north_arrow"]["size"]
-    assert out["north"]["at_mm"] == [10.0 + w, 10.0 + h]
+    assert out["north"]["at_mm"] == [10.0, 10.0]  # правый нижний угол знака в обоих форматах
 
     pptx = pytest.importorskip("pptx")
     prs = pptx.Presentation()
@@ -99,3 +99,25 @@ def test_unknown_kind():
     doc["layers"].append({"id": "x", "role": "x", "kind": "raster", "source_label": "x"})
     with pytest.raises(ValueError, match="вид raster"):
         deck_overlay.translate(doc)
+
+
+def test_grouped_legend_passes_deck(deck):
+    """Легенда с 9 строк — группы: строки kind: group переводчик пропускает, check верстки принимает перевод, а ее
+    раскладка ставит заголовки тех же уровней map.yaml: levels, что в overlay."""
+    doc = copy.deepcopy(sample("k1-zoning.overlay.json"))
+    legend = next(layer for layer in doc["layers"] if layer["kind"] == "legend")
+    std, style = tokens.load("map"), tokens.load("style")
+    cats = list(std["zoning"]["categories"])
+    rows = [{"role": "analysis", "kind": "group", "text": std["levels"]["analysis"]["title"]},
+            {"role": "point_1", "kind": "point", "symbol": "circle", "text": "Школы"},
+            {"role": "reach_walk", "kind": "polygon", "text": "10 минут пешком"},
+            {"role": "boundaries", "kind": "group", "text": std["levels"]["boundaries"]["title"]},
+            {"role": "territory", "kind": "polygon", "text": "Граница"}]
+    rows += [{"role": "zoning", "kind": "polygon", "category": c, "text": std["zoning"]["categories"][c]["title"]}
+             for c in cats]
+    legend["legend"] = rows
+    out = deck_overlay.translate(doc)
+    deck.check(out)
+    assert len(out["legend"]) == len(rows) - 2 >= std["legend"]["groups_from"]
+    items, _, _ = deck._legend_items(out["legend"], std, style, {})
+    assert [i[2] for i in items if i[0] == "group"] == [r["text"] for r in rows if r["kind"] == "group"]

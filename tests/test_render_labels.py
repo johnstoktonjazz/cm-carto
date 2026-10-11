@@ -42,3 +42,20 @@ def test_wrap_keeps_number_with_sign():
     measure = Measure(tokens.load("map"), tokens.load("style"))
     wrapped = measure.wrap(clean('МБДОУ д/с 20 "Красная Шапочка"'))
     assert f"№{NBSP}20" in wrapped.split("\n")[0]
+
+
+def test_wrap_keeps_name_with_imeni():
+    """Перенос не отрывает «имени» от имени, «№ 2» — неразрывно: «Гимназия № 2 / имени Чехова»."""
+    from cm_carto import tokens
+
+    measure = Measure(tokens.load("map"), tokens.load("style"))
+    assert measure.wrap(clean("Гимназия 2 им. Чехова")) == f"Гимназия №{NBSP}2\nимени Чехова"
+    assert measure.wrap("Парк культуры и отдыха на набережной") == "Парк культуры и отдыха\nна набережной"
+
+
+def test_basemap_name():
+    from cm_carto.render.labels import name
+
+    assert name("Четвёртая линия") == "Четвертая линия"
+    assert name("улица Городская") == "улица Городская"
+    assert name('сквер "Дубки"') == "сквер «Дубки»"

@@ -11,6 +11,7 @@ import sys
 import geopandas as gpd
 import jsonschema
 import pytest
+import shapely
 import yaml
 from PIL import Image
 from pyproj import CRS
@@ -18,7 +19,7 @@ from shapely import affinity
 from shapely.geometry import LineString, Point, Polygon, box
 
 from cm_carto import gpkg, paths, tokens
-from cm_carto.render import build, overlay
+from cm_carto.render import build, deck_overlay, overlay, spec as spec_file
 
 CRS_NAME = "EPSG:32637"
 X, Y = 500000, 5000000
@@ -57,6 +58,12 @@ def frames() -> dict[str, gpd.GeoDataFrame]:
         "zouit": rows("zouit", [("z1", box(X + 300, Y + 300, X + 600, Y + 600), {**OFFICIAL, "zouit_type": "sanitary"})]),
         "isochrones": rows("isochrones", [("walk-10", CIRCLE, {**OSM, "mode": "walk", "minutes": 10.0,
                                                               "source_label": "синтетический расчет"})]),
+        # Зоны ПЗЗ: Ж — большая, через нее идет улица main; остальные категории — полосой сверху.
+        "zones_pzz": rows("zones_pzz", [("zh", box(X - 400, Y - 200, X + 400, Y + 150),
+                                         {**OFFICIAL, "zone": "Ж", "code": "Ж-1", "fact_ids": ["F-000530"]})]
+                          + [(f"z{i}", box(X - 420 + i * 120, Y + 250, X - 320 + i * 120, Y + 320),
+                              {**OFFICIAL, "zone": zone, "code": f"{zone}-1"})
+                             for i, zone in enumerate(["ОЖ", "ОД", "П", "ИТ", "Р", "СН"])]),
     }
 
 
@@ -371,3 +378,99 @@ def test_style_color_changes_basemap_and_preview_not_overlay(project, tmp_path, 
     before = (project / "maps" / "style-before.overlay.json").read_text(encoding="utf-8")
     after = (project / "maps" / "style-after.overlay.json").read_text(encoding="utf-8")
     assert before.replace('"style-before.png"', '"style-after.png"') == after
+
+
+def streets_gpkg(project, name: str, isochrone=None) -> str:
+    """Геопакет с улицей main «Четвёртая линия» через зону Ж (y = Y − 10) и, если дано, своей изохроной."""
+    data = frames()
+    data["roads"].loc[0, "name"] = "Четвёртая линия"
+    if isochrone is not None:
+        data["isochrones"] = data["isochrones"].set_geometry([isochrone], crs=data["isochrones"].crs)
+    gpkg.write(project / "geo" / f"{name}.gpkg", data, "синтетический проект", CRS.from_user_input(CRS_NAME),
+               CRS_NAME, "sha256:" + "0" * 64)
+    return f"geo/{name}.gpkg"
+
+
+def test_street_cut_from_zone(project):
+    """Улица main (полуширина 14 м — rules/fetch.yaml: blocks.half_width_m, как у кварталов подложки) идет через зону Ж:
+    в overlay в зоне полоса без заливки шириной 2 × 1,4 мм на 1:10 000; граница территории (без заливки) не режется."""
+    widths = yaml.safe_load(build.FETCH_RULES.read_text(encoding="utf-8"))["blocks"]["half_width_m"]
+    half = widths["main"] * 1000 / 10000
+    layers = {"zoning": {"layer": "zones_pzz"}, "territory": {"layer": "boundary_planning"},
+              "road_main": {"layer": "roads", "where": "road_class = 'main'"}, "blocks": {}}
+    build.render(describe(project, "cut", layers=layers, data=streets_gpkg(project, "cut")))
+    doc = side(project, "cut", ".overlay.json")
+    zh = layer(doc, "zoning_zh")
+    assert zh["role"] == "zoning" and {f["category"] for f in zh["features"]} == {"Ж"}
+    assert len(zh["features"]) == 2 and {f["id"] for f in zh["features"]} == {"zones_pzz:zh"}  # две части, один id
+    assert all(f["status"] == "official" and f["fact_ids"] == ["F-000530"] for f in zh["features"])
+    zone = shapely.union_all([Polygon(f["rings"][0], f["rings"][1:]) for f in zh["features"]])
+    axis = (444.45 + 10) / 10  # y улицы в мм места: (верх охвата − (Y − 10)) / 10
+    tolerance = overlay.SIMPLIFY_MM + overlay.ROUND_MM
+    for x in (20.0, 45.0, 70.0):
+        assert not zone.intersects(LineString([(x, axis - half + tolerance), (x, axis + half - tolerance)]))
+        assert zone.contains(Point(x, axis - half - tolerance)) and zone.contains(Point(x, axis + half + tolerance))
+    territory = layer(doc, "territory")["features"]
+    assert len(territory) == 1 and len(territory[0]["rings"]) == 1
+
+
+def test_basemap_labels_avoid_overlay_lines(project, monkeypatch):
+    """Подпись улицы подложки не пересекает линию изохроны: контуры без заливки — места, которые QGIS закрывает для
+    подписей подложки. Изохрона — узкая полоса поперек улицы посередине карты, где подпись встала бы без запрета."""
+    strip = box(X - 20, Y - 300, X + 20, Y + 300)
+    seen = []
+    labels = build.basemap_labels
+    monkeypatch.setattr(build, "basemap_labels", lambda *a: seen.append(labels(*a)) or seen[-1])
+    layers = {"reach_walk": {"layer": "isochrones"}, "road_main": {"layer": "roads", "where": "road_class = 'main'"},
+              "blocks": {}}
+    build.render(describe(project, "avoid", layers=layers, data=streets_gpkg(project, "avoid", strip)))
+    ring = layer(side(project, "avoid", ".overlay.json"), "reach_walk")["features"][0]["rings"][0]
+    edge = LineString(ring)
+    assert seen and seen[0], "подпись улицы не встала"
+    assert not any(box(*r).intersects(edge) for r in seen[0])
+
+
+def test_basemap_label_follows_text_rules(project):
+    """«Четвёртая линия» в геопакете — «Четвертая линия» в подписи подложки: QGIS подписывает копию слоя в памяти."""
+    layers = {"road_main": {"layer": "roads", "where": "road_class = 'main'"}, "blocks": {}}
+    path = describe(project, "yo", layers=layers, data=streets_gpkg(project, "yo"))
+    spec = spec_file.load(path)
+    build.start()
+    role = next(r for r in spec.roles if r.key == "road_main")
+    d = build.vector(spec, tokens.load("map"), role, build.frame(spec))
+    assert [f["name"] for f in d.layer.getFeatures()] == ["Четвертая линия"]
+    assert d.layer.labelsEnabled() and d.rows[0]["name"] == "Четвёртая линия"  # данные — как в источнике
+
+
+def test_caption_merges_one_provider():
+    """Подпись карты: один поставщик и лицензия — одной записью, слои через запятую; уточнение источника слоя
+    («кварталы по улицам») — вместо имени слоя."""
+    from types import SimpleNamespace as NS
+
+    osm = "OpenStreetMap через Overture Maps 2026-09-23.0"
+    drawn = [NS(role=NS(title="Магистральная улица"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Железная дорога"), rows=[{"source_label": osm, "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Кварталы"), rows=[{"source_label": f"{osm}, кварталы по улицам",
+                                                  "source_license": "ODbL 1.0"}]),
+             NS(role=NS(title="Водные объекты"), rows=[{"source_label": "чертеж ППТ, лист 2", "source_license": None}])]
+    assert build.caption(drawn) == (f"{osm} (магистральная улица, железная дорога, кварталы по улицам), ODbL 1.0; "
+                                     "чертеж ППТ, лист 2 (водные объекты)")
+
+
+def test_legend_groups_from_nine_rows(project):
+    """11 строк (зоны — по строке на категорию) — группы по уровням map.yaml: levels, строка kind: group; переводчик
+    для верстки их пропускает, а ее раскладка ставит те же заголовки."""
+    layers = {"point_1": {"layer": "poi_education", "where": "poi_type = 'school'", "title": "Школы"},
+              "reach_walk": {"layer": "isochrones", "title": "10 минут пешком"},
+              "territory": {"layer": "boundary_planning"}, "zone_sanitary": {"layer": "zouit"},
+              "zoning": {"layer": "zones_pzz"}, "blocks": {}}
+    build.render(describe(project, "groups", layers=layers))
+    doc = side(project, "groups", ".overlay.json")
+    rows = layer(doc, "legend")["legend"]
+    std = tokens.load("map")
+    groups = [r for r in rows if r["kind"] == "group"]
+    assert [(r["role"], r["text"]) for r in groups] == [(k, std["levels"][k]["title"]) for k in ("analysis", "boundaries")]
+    assert len(rows) - len(groups) == 11 and rows[0]["kind"] == "group"
+    assert [r["category"] for r in rows if r["role"] == "zoning"] == ["Ж", "ОЖ", "ОД", "П", "ИТ", "Р", "СН"]
+    out = deck_overlay.translate(doc)
+    assert len(out["legend"]) == 11 and out["legend"][-1]["layer"] == "zoning:СН"

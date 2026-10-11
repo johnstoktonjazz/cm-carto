@@ -1,20 +1,20 @@
 """ВРЕМЕННО, до перехода cm-deck на контракт overlay; удалить вместе с вызовом (scripts/build_k1.sh).
 
-Переводчик <карта>.overlay.json (контракт overlay 1.0.0) → <карта>.deck-overlay.json — черновой формат, который
+Переводчик <карта>.overlay.json (контракт overlay 1.1.0) → <карта>.deck-overlay.json — черновой формат, который
 разбирает cm_deck/overlay.py верстки (check, draw; описание — в шапке того модуля). Наш overlay.json остается
 по контракту, переводчик его не меняет.
 
 Соответствие:
-- слой данных: роль → layer; «zoning.Ж» → «zoning:Ж»; polygon (rings: первое — внешнее, остальные — дыры) →
+- слой данных: роль → layer; зона (role zoning, category Ж) → «zoning:Ж»; polygon (rings: первое — внешнее, остальные — дыры) →
   polygon points_mm/holes_mm; line (path) → polyline; point (at) → point at_mm;
 - подпись (kind label): строка — элемент text (у верстки текст в одну строку: середина строки на at_mm, по
   горизонтали по anchor l/c/r), положение строк — как расставил картограф, нижняя строка — первой (плашки); подпись с выноской (leader_to) — callout
   на слое leader (точка на объекте — at_mm, у конца выноски — первая строка), остальные строки — text на том же
   слое; кегль — style = size_role; подпись зон — слой категории своей зоны;
-- легенда: строки {layer, label}; группы по уровням с 9 строк верстка ставит сама (map.yaml: legend.groups_from);
-  legend_inside — есть legend_at;
-- scale_bar → scalebar {at_mm, length_mm, label}: at — левый конец линии в обоих форматах; north_arrow: at — левый
-  верхний угол знака у нас, правый нижний — у верстки;
+- легенда: строки {layer, label}; строки kind: group пропускаются — группы по уровням с 9 строк верстка ставит
+  сама (map.yaml: legend.groups_from, те же заголовки map.yaml: levels); legend_inside — есть legend_at;
+- scale_bar → scalebar {at_mm, length_mm, label}: at — левый конец линии в обоих форматах; north_arrow: at — правый
+  нижний угол знака в обоих форматах;
 - id элемента — object_id, «:» → «.»; части одного объекта — «-2», «-3».
 
     scripts/run.sh python -m cm_carto.render.deck_overlay <карта>.overlay.json [...]
@@ -31,9 +31,9 @@ DATA_KINDS = ("polygon", "line", "point")
 SUFFIX = ".deck-overlay.json"
 
 
-def layer_key(role: str) -> str:
-    """Роль контракта → слой верстки: «zoning.Ж» → «zoning:Ж»."""
-    return role.replace(".", ":", 1) if role.startswith("zoning.") else role
+def layer_key(role: str, category: str | None = None) -> str:
+    """Роль и категория контракта → слой верстки: zoning, Ж → «zoning:Ж»."""
+    return f"{role}:{category}" if category else role
 
 
 def element_id(object_id: str, seen: set, layer: str) -> str:
@@ -66,7 +66,7 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
     measure = Measure(std, style)
     data = [layer for layer in doc["layers"] if layer["kind"] in DATA_KINDS]
     # Подпись зоны — на слое категории своей зоны: object_id → слой верстки.
-    owner = {(layer["role"].split(".", 1)[0], f["id"]): layer_key(layer["role"])
+    owner = {(layer["role"], f["id"]): layer_key(layer["role"], f.get("category"))
              for layer in data for f in layer["features"]}
     elements, seen = [], set()
     out = {"place": doc["place"]["name"],
@@ -81,9 +81,11 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
     for layer in doc["layers"]:
         kind = layer["kind"]
         if kind in DATA_KINDS:
-            key = layer_key(layer["role"])
-            out["layers"].append({"name": key, "source": layer["source_label"], "status": layer.get("status", "")})
+            keys = []
             for f in layer["features"]:
+                key = layer_key(layer["role"], f.get("category"))
+                if key not in keys:
+                    keys.append(key)
                 el = {"id": element_id(f["id"], seen, key), "layer": key}
                 if kind == "polygon":
                     el |= {"kind": "polygon", "points_mm": f["rings"][0]}
@@ -94,6 +96,8 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
                 else:
                     el |= {"kind": "point", "at_mm": f["at"]}
                 elements.append(el)
+            out["layers"] += [{"name": key, "source": layer["source_label"], "status": layer.get("status", "")}
+                              for key in keys]
         elif kind == "label":
             for f in layer["features"]:
                 key = owner.get((layer["role"], f["id"]), layer_key(layer["role"]))
@@ -119,7 +123,8 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
                                      "style": style_key})
                 elements += callout  # первая строка с выноской — последней, поверх плашек нижних строк
         elif kind == "legend":
-            out["legend"] = [{"layer": layer_key(row["role"]), "label": row["text"]} for row in layer["legend"]]
+            out["legend"] = [{"layer": layer_key(row["role"], row.get("category")), "label": row["text"]}
+                             for row in layer["legend"] if row.get("kind") != "group"]
             out["legend_inside"] = "legend_at" in layer
         elif kind == "scalebar":
             bar = layer["scalebar"]
@@ -132,9 +137,7 @@ def translate(doc: dict, std: dict | None = None, style: dict | None = None) -> 
             out["scalebar"] = {"at_mm": bar["at"], "length_mm": round(bar["segment_mm"] * segments, 2),
                                "label": label}
         elif kind == "north":
-            w, h = std["north_arrow"]["size"]
-            x, y = layer["features"][0]["at"]
-            out["north"] = {"at_mm": [round(x + w, 2), round(y + h, 2)]}
+            out["north"] = {"at_mm": layer["features"][0]["at"]}
         else:
             raise ValueError(f"слой {layer['id']}: вид {kind} переводчик не знает")
     return out

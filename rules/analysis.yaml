@@ -32,6 +32,7 @@ labels:
 buffers:
   quad_segs: 8                   # сегментов на четверть окружности в закруглениях буфера
   label: "буфер {distance} м по {norm}, от {origin}"
+  own_data_license: "данные заказчика, внешней лицензии нет"   # у источника без source_license (КПТ, ППТ)
   rules:
     szz-boiler:
       layer: poi_other

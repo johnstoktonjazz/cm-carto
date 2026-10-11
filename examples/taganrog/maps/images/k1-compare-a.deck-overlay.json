@@ -1712,6 +1712,66 @@
    "text": "Таганрог-II",
    "anchor": "l",
    "style": "label"
+  },
+  {
+   "kind": "text",
+   "id": "poi_education.ovt-078ba5db-9bfb-4d7a-b2e1-3f2df7b943c2-2",
+   "layer": "point_1",
+   "at_mm": [
+    56.02,
+    11.15
+   ],
+   "text": "школа № 21",
+   "anchor": "l",
+   "style": "label"
+  },
+  {
+   "kind": "text",
+   "id": "poi_education.ovt-078ba5db-9bfb-4d7a-b2e1-3f2df7b943c2-3",
+   "layer": "point_1",
+   "at_mm": [
+    56.02,
+    7.3
+   ],
+   "text": "общеобразовательная",
+   "anchor": "l",
+   "style": "label"
+  },
+  {
+   "kind": "text",
+   "id": "poi_education.ovt-078ba5db-9bfb-4d7a-b2e1-3f2df7b943c2-4",
+   "layer": "point_1",
+   "at_mm": [
+    56.02,
+    3.46
+   ],
+   "text": "Средняя",
+   "anchor": "l",
+   "style": "label"
+  },
+  {
+   "kind": "text",
+   "id": "poi_education.ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a-2",
+   "layer": "point_1",
+   "at_mm": [
+    59.84,
+    71.95
+   ],
+   "text": "имени Чехова",
+   "anchor": "r",
+   "style": "label"
+  },
+  {
+   "kind": "text",
+   "id": "poi_education.ovt-30cb3cba-8414-4f48-baff-7ef2d9fa123a-3",
+   "layer": "point_1",
+   "at_mm": [
+    59.84,
+    68.1
+   ],
+   "text": "Гимназия № 2",
+   "anchor": "r",
+   "style": "label"
   }
  ],
  "legend": [
@@ -1742,7 +1802,7 @@
   {
    "name": "reach_walk",
    "source": "расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0 от 2026-09-23, 4,8 км/ч, ODbL 1.0",
-   "status": "reference"
+   "status": "calc"
   },
   {
    "name": "point_1",

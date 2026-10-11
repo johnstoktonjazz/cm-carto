@@ -49,9 +49,10 @@ def test_distance_comes_from_the_norm_and_follows_the_registry(tmp_path):
 def test_status_and_label_follow_the_source(tmp_path):
     project = world(tmp_path)
     cadastral = only(project, "szz-industry-v", [PARCEL])
-    assert cadastral["status"] == "cadastral" and cadastral["source_label"] == "буфер 50 м по NORM-90002, от тестовая КПТ"
+    assert cadastral["status"] == "calc" and cadastral["source_label"] == "буфер 50 м по NORM-90002, от тестовая КПТ"
     osm = only(project, "szz-boiler")
-    assert osm["status"] == "reference" and osm["source_license"] == "ODbL 1.0"
+    assert cadastral["source_license"] == "данные заказчика, внешней лицензии нет" and cadastral["fact_ids"] == ["NORM-90002"]
+    assert osm["status"] == "calc" and osm["source_license"] == "ODbL 1.0" and osm["fact_ids"] == ["NORM-90001"]
     assert osm["source_label"].startswith("буфер 50 м по NORM-90001, от тестовые улицы")
     assert osm["buffer_type"] == "sanitary"
 

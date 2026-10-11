@@ -1,6 +1,7 @@
 """fetch overture: правила раскладки классов, разбор record_id, повторная раскладка из кеша байт в байт."""
 
 import pytest
+import shapely
 from fetch_fixtures import RELEASE, overture_cache, project_file
 
 from cm_carto import gpkg, project
@@ -150,3 +151,17 @@ def test_block_is_whole_cell_between_street_strips():
     cell = found[found.contains(shapely.Point(300, 300))].geometry.iloc[0]
     expected = (200 - half["main"] - half["local"]) ** 2
     assert abs(cell.area - expected) < 1e-6
+
+
+def test_parallel_tracks_become_siding():
+    line = lambda y, x1=1000: shapely.LineString([(0, y), (x1, y)])
+    row = lambda key, geom, cls="main", tunnel=False: {"key": key, "geometry": geom, "rail_class": cls, "tunnel": tunnel}
+    rows = [row("a", line(0)), row("b", line(5, 800)), row("c", line(10, 600)), row("far", line(500)),
+            row("tram", line(2), "tram"), row("tun", line(3), tunnel=True)]
+    overture.parallel_sidings(rows, "rail_class")
+    assert {r["key"]: r["rail_class"] for r in rows} == {"a": "main", "b": "siding", "c": "siding", "far": "main",
+                                                          "tram": "tram", "tun": "main"}
+
+
+def test_osm_service_tag_gives_siding():
+    assert {"siding", "yard", "spur", "crossover"} <= set(common.rules()["rail"]["siding_service"])

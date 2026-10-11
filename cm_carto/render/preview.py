@@ -114,10 +114,10 @@ class Canvas:
             self.draw.text((x0, y0 + i * line_h), line, font=font, fill=color, anchor="la")
 
 
-def role_style(std: dict, role: str) -> tuple[dict, str | None]:
-    """Стиль роли overlay: (слой map.yaml, заливка категории); «zoning.<категория>» — категория зон ПЗЗ."""
-    if role.startswith("zoning."):
-        category = std["zoning"]["categories"][role.split(".", 1)[1]]
+def role_style(std: dict, role: str, category: str | None = None) -> tuple[dict, str | None]:
+    """Стиль роли overlay: (слой map.yaml, заливка категории); у зон ПЗЗ (zoning) — заливка категории."""
+    if role == "zoning":
+        category = std["zoning"]["categories"][category]
         layer = {"geometry": "polygon"}  # зоны без обводки (MAPS.md, ответ 36); обводка — если стандарт ее задаст
         if "stroke" in std["zoning"]:
             layer["stroke"] = std["zoning"]["stroke"]
@@ -125,9 +125,9 @@ def role_style(std: dict, role: str) -> tuple[dict, str | None]:
     return spec_file.role_spec(std, role), None
 
 
-def swatch(canvas: Canvas, role: str, x: float, y: float) -> None:
+def swatch(canvas: Canvas, role: str, x: float, y: float, category: str | None = None) -> None:
     std = canvas.std
-    layer, fill = role_style(std, role)
+    layer, fill = role_style(std, role, category)
     sw, sh = std["legend"]["swatch"]
     if layer["geometry"] == "point":
         canvas.marker((x + sw / 2, y + sh / 2), layer["marker"])
@@ -142,17 +142,24 @@ def legend(canvas: Canvas, layer: dict, origin: tuple[float, float]) -> None:
     std, rule = canvas.std, canvas.std["legend"]
     sw, sh = rule["swatch"]
     x, y = origin
+    rows = layer["legend"]
+    group = sum(1 for r in rows if r.get("kind") == "group")
     if "legend_at" in layer:
         pad = rule["inside"]["padding"]
-        rows = len(layer["legend"])
-        height = rows * sh + (rows - 1) * rule["item_gap"] + 2 * pad
+        items = len(rows) - group
+        height = items * sh + (len(rows) - 1) * rule["item_gap"] + group * (sh + rule["group_gap"]) + 2 * pad
         width = sw + rule["swatch_text_gap"] + max(
-            canvas.draw.textlength(r["text"], font=canvas.font(rule["text"])) / canvas.k for r in layer["legend"]) + 2 * pad
+            canvas.draw.textlength(r["text"], font=canvas.font(rule["text"])) / canvas.k for r in rows) + 2 * pad
         canvas.draw.rectangle([*canvas.px((x, y)), *canvas.px((x + width, y + height))], fill=canvas.color("background"))
         x, y = x + pad, y + pad
-    for row in layer["legend"]:
-        swatch(canvas, row["role"], x, y)
-        canvas.text((x + sw + rule["swatch_text_gap"], y + sh / 2), row["text"], rule["text"], "middle-left", plate=False)
+    for n, row in enumerate(rows):
+        if row.get("kind") == "group":  # заголовок группы по уровню (MAPS.md, 6)
+            y += rule["group_gap"] if n else 0
+            canvas.text((x, y + sh / 2), row["text"], rule["group_text"], "middle-left", plate=False)
+        else:
+            swatch(canvas, row["role"], x, y, row.get("category"))
+            canvas.text((x + sw + rule["swatch_text_gap"], y + sh / 2), row["text"], rule["text"], "middle-left",
+                        plate=False)
         y += sh + rule["item_gap"]
 
 
@@ -181,9 +188,10 @@ def scale_bar(canvas: Canvas, layer: dict, style: dict) -> None:
 
 
 def north(canvas: Canvas, at) -> None:
+    """at — правый нижний угол знака (overlay 1.1.0)."""
     rule = canvas.std["north_arrow"]
     w, h = rule["size"]
-    x, y = at
+    x, y = at[0] - w, at[1] - h
     canvas.draw.polygon([canvas.px((x + w / 2, y + h * 0.3)), canvas.px((x, y + h)), canvas.px((x + w, y + h))],
                         fill=canvas.color(rule["color"]))
     canvas.text((x + w / 2, y), "С", rule["text"], "top-center", plate=False)
@@ -209,8 +217,8 @@ def render(overlay_path: Path, out: Path) -> Path:
     for layer in data["layers"]:
         kind = layer["kind"]
         if kind in ("polygon", "line", "point"):
-            spec_role, fill = role_style(std, layer["role"])
             for f in layer["features"]:
+                spec_role, fill = role_style(std, layer["role"], f.get("category"))
                 if kind == "polygon":
                     canvas.polygon(f["rings"], spec_role, fill=fill)
                 elif kind == "line":

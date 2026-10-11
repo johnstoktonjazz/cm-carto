@@ -5,8 +5,11 @@
   верстки без линейки, севера и легенды, в размер места, 300 dpi; <out>.provenance.json по контракту image;
 - <out>.overlay.json — остальное по контракту overlay (overlay.py): объекты, подписи, легенда, линейка, север.
 
-Overlay лежит поверх всей подложки: зоны ПЗЗ, которые по стандарту стоят под улицами (zoning.above), закрывают улицы
-внутри зон — в overlay 1.0.0 нет места слою между частями подложки (вопрос к контракту, доклад render-dev).
+Overlay лежит поверх всей подложки (второго растра нет, К-028): улицы подложки вырезаются из зон ПЗЗ и ограничений
+полосой по классу улицы — полуширины те же, что у кварталов подложки (rules/fetch.yaml: blocks.half_width_m);
+подписи подложки обходят линии и контуры overlay, знаки, линейку и легенду внутри (label blocking items QGIS, прием
+верстки в cm_deck/qgis_render.py). Подписи подложки — по TEXT.md (labels.name) из копии слоя в памяти: геопакет
+хранит name как в источнике.
 Стили ролей — design/qgis/<роль>.qml без правок (К-004). Слой роли — слой геопакета с отбором where и объектами,
 пересекающими охват карты, и, если задан within, — внутри контура. Кеш — по хэшу описания, анкеты, геопакета, стилей и токенов верстки, контрактов и кода.
 """
@@ -33,26 +36,34 @@ from qgis.core import (  # noqa: E402
     QgsCategorizedSymbolRenderer,
     QgsCoordinateReferenceSystem,
     QgsFeatureRequest,
+    QgsFillSymbol,
     QgsLayoutExporter,
+    QgsLayoutItemShape,
+    QgsLayoutPoint,
+    QgsLayoutSize,
     QgsMapRendererSequentialJob,
     QgsPrintLayout,
     QgsProject,
     QgsReadWriteContext,
     QgsRectangle,
     QgsVectorLayer,
+    QgsVectorLayerSimpleLabeling,
 )
 from qgis.PyQt.QtCore import QSizeF  # noqa: E402
 from qgis.PyQt.QtXml import QDomDocument  # noqa: E402
 
 from cm_carto import paths, tokens  # noqa: E402
-from cm_carto.render import overlay, preview as preview_file, spec as spec_file  # noqa: E402
+from cm_carto.render import labels as label_rules, overlay, preview as preview_file, spec as spec_file  # noqa: E402
 from cm_carto.render.spec import Role, Spec  # noqa: E402
 
 CACHE = paths.ROOT / "_build" / "cache"
-CODE = [*sorted(Path(__file__).parent.glob("*.py")), Path(__file__).with_name("print.yaml"), spec_file.SCHEMA]
+FETCH_RULES = paths.ROOT / "rules" / "fetch.yaml"
+CODE = [*sorted(Path(__file__).parent.glob("*.py")), Path(__file__).with_name("print.yaml"), spec_file.SCHEMA,
+        label_rules.RULES, FETCH_RULES]
 SOURCE_FIELDS = ["status", "source_label", "source_license", "source_date"]
 # Статусы геометрии от надежного к слабому: сводный статус карты и слоя — самый слабый из встреченных.
-STATUSES = ["official", "cadastral", "concept", "digitized", "reference"]
+STATUSES = ["official", "cadastral", "concept", "digitized", "reference", "calc"]
+STREET_ROLES = ("road_express", "road_main", "road_district", "road_local", "road_pedestrian")
 
 
 @cache
@@ -102,7 +113,7 @@ def vector(spec: Spec, std: dict, role: Role, rect: QgsRectangle) -> Drawn:
     message, ok = layer.loadNamedStyle(str(paths.qgis_styles() / f"{role.key}.qml"))
     if not ok:
         raise ValueError(f"{role.key}.qml: {message}")
-    data = role.level != "basemap"
+    data = role.level != "basemap" or role.key in STREET_ROLES  # улицы — для вырезки из зон
     request = QgsFeatureRequest().setFilterRect(rect).setFlags(QgsFeatureRequest.Flag.ExactIntersect)
     names = layer.fields().names()
     if role.contour is not None:
@@ -123,7 +134,29 @@ def vector(spec: Spec, std: dict, role: Role, rect: QgsRectangle) -> Drawn:
     found.sort(key=lambda item: item[0])
     ids = ",".join(str(fid) for fid, _ in found) or "-1"
     layer.setSubsetString(f"({role.where}) AND fid IN ({ids})" if role.where else f"fid IN ({ids})")
-    return Drawn(role, spec_file.role_spec(std, role.key), layer, [row for _, row in found])
+    spec = spec_file.role_spec(std, role.key)
+    if role.level == "basemap" and "label" in spec:
+        layer = basemap_copy(layer, spec["label"]["field"])
+    return Drawn(role, spec, layer, [row for _, row in found])
+
+
+def basemap_copy(layer: QgsVectorLayer, field: str) -> QgsVectorLayer:
+    """Слой подложки с подписями — копия в памяти, подпись по TEXT.md (labels.name): «Четвёртая линия» →
+    «Четвертая линия». Стиль и подписи — тот же qml; геопакет не меняется."""
+    copy = layer.materialize(QgsFeatureRequest())
+    index = copy.fields().indexOf(field)
+    changes = {}
+    for f in copy.getFeatures():
+        text = value(f[field])
+        if text is not None and label_rules.name(str(text)) != text:
+            changes[f.id()] = {index: label_rules.name(str(text))}
+    if changes and not copy.dataProvider().changeAttributeValues(changes):
+        raise RuntimeError(f"{layer.name()}: подписи подложки не записаны в копию слоя")
+    copy.setName(layer.name())
+    copy.setRenderer(layer.renderer().clone())
+    copy.setLabeling(QgsVectorLayerSimpleLabeling(layer.labeling().settings()))
+    copy.setLabelsEnabled(layer.labelsEnabled())
+    return copy
 
 
 def check_print(spec: Spec, drawn: list[Drawn]) -> None:
@@ -167,6 +200,26 @@ def weakest(statuses) -> str:
     return max(statuses, key=STATUSES.index)
 
 
+def caption(basemap: list[Drawn]) -> str:
+    """Подпись карты (source в provenance): источники одного поставщика и лицензии — одной записью со слоями через
+    запятую: «OpenStreetMap через Overture Maps 2026-09-23.0 (магистральная улица, …, кварталы по улицам), ODbL 1.0».
+    Подпись источника, которая продолжает другую через запятую («…2026-09-23.0, кварталы по улицам»), — тот же
+    поставщик, и продолжение заменяет имя слоя."""
+    found = [(row["source_label"] or "", row["source_license"] or "", d.role.title)
+             for d in basemap for row in d.rows]
+    labels = {(label, lic) for label, lic, _ in found}
+    groups: dict[tuple, list[str]] = {}
+    for label, lic, title in found:
+        bases = [b for b, other in labels if other == lic and label.startswith(b + ", ")]
+        base = min(bases, key=len) if bases else label
+        name = label[len(base) + 2:] if bases else title[:1].lower() + title[1:]
+        names = groups.setdefault((base, lic), [])
+        if name not in names:
+            names.append(name)
+    return "; ".join(", ".join(x for x in (f"{base} ({', '.join(names)})", lic) if x)
+                     for (base, lic), names in groups.items())
+
+
 def sources(rows: list[dict]) -> list[str]:
     """Подписи источников объектов в порядке появления: «подпись, лицензия»."""
     out = []
@@ -183,9 +236,39 @@ def layer_entry(d: Drawn) -> dict:
             "status": weakest(row["status"] for row in d.rows), "date": max(row["source_date"] for row in d.rows)}
 
 
+def blockers(layout: QgsPrintLayout, rects: list) -> None:
+    """Места, которые подписи подложки обходят (мм места = мм компоновки: карта в углу страницы): прямоугольники
+    без краски — label blocking items карты, как у верстки (cm_deck/qgis_render.py: blockers)."""
+    item = layout.itemById("map")
+    for x0, y0, x1, y1 in rects:
+        shape = QgsLayoutItemShape(layout)
+        shape.setShapeType(QgsLayoutItemShape.Rectangle)
+        shape.attemptMove(QgsLayoutPoint(x0, y0, Qgis.LayoutUnit.Millimeters))
+        shape.attemptResize(QgsLayoutSize(max(x1 - x0, 0.1), max(y1 - y0, 0.1), Qgis.LayoutUnit.Millimeters))
+        shape.setSymbol(QgsFillSymbol.createSimple({"style": "no", "outline_style": "no"}))
+        layout.addLayoutItem(shape)
+        item.addLabelBlockingItem(shape)
+
+
+def street_cut(std: dict, drawn: list[Drawn]):
+    """Полосы улиц подложки в системе проекта: ось ± полуширина класса (rules/fetch.yaml: blocks.half_width_m — те же,
+    что у кварталов подложки); класса нет в правилах — ошибка."""
+    widths = yaml.safe_load(FETCH_RULES.read_text(encoding="utf-8"))["blocks"]["half_width_m"]
+    strips = []
+    for d in drawn:
+        if d.role.key not in STREET_ROLES:
+            continue
+        for row in d.rows:
+            if row["road_class"] not in widths:
+                raise ValueError(f"улица {row['object_id']}: класса {row['road_class']} нет в {FETCH_RULES.name}: "
+                                 f"blocks.half_width_m — ширина полосы для вырезки из зон")
+            strips.append(row["geom"].buffer(widths[row["road_class"]], cap_style="flat"))
+    return shapely.union_all(strips) if strips else None
+
+
 def basemap_labels(item, rect: QgsRectangle, spec: Spec, dpi: int) -> list[tuple[float, float, float, float]]:
     """Рамки подписей подложки (улицы, вода, зелень) в мм места: тот же движок подписей QGIS с теми же настройками
-    карты, что у экспорта; подписи overlay их не задевают."""
+    карты (и местами blockers), что у экспорта; подписи overlay их не задевают."""
     size = QSizeF(spec.size_mm[0] / 25.4 * dpi, spec.size_mm[1] / 25.4 * dpi)
     job = QgsMapRendererSequentialJob(item.mapSettings(rect, size, dpi, True))
     job.start()
@@ -202,12 +285,9 @@ def basemap_labels(item, rect: QgsRectangle, spec: Spec, dpi: int) -> list[tuple
 
 
 def provenance(spec: Spec, std: dict, style: dict, basemap: list[Drawn]) -> dict:
-    """Описание подложки по контракту image: слои, источник, дата и статус — только подложки. Статус — самый слабый
-    из слоев подложки; reference в image: status нет — тогда ошибка (вопрос к контракту, доклад render-dev)."""
+    """Описание подложки по контракту image 1.1.0: слои, источник (caption), дата и статус — только подложки. Статус —
+    самый слабый из слоев подложки; статуса нет в image: status — ошибка."""
     layers = [layer_entry(d) for d in basemap]
-    all_sources = []
-    for d in basemap:
-        all_sources += [s for s in sources(d.rows) if s not in all_sources]
     status = weakest(entry["status"] for entry in layers)
     if status not in image_schema()["properties"]["status"]["enum"]:
         raise ValueError(f"{spec.path}: статус подложки {status}, в контракте image: status его нет — provenance "
@@ -215,7 +295,7 @@ def provenance(spec: Spec, std: dict, style: dict, basemap: list[Drawn]) -> dict
     doc = {"file": spec.out.name, "kind": "map"}
     if spec.title:
         doc["title"] = spec.title
-    doc |= {"source": "; ".join(all_sources), "date": max(entry["date"] for entry in layers), "status": status,
+    doc |= {"source": caption(basemap), "date": max(entry["date"] for entry in layers), "status": status,
             "size_mm": {"width": spec.size_mm[0], "height": spec.size_mm[1]}, "dpi": std["export"]["dpi"],
             "crs": spec.project.crs_name, "scale": f"1:{spec.scale}", "layers": layers}  # image 1.1.0: ^1:[0-9]+$
     if "overlay_file" in image_schema()["properties"]:  # image 1.1.0: ссылка подложки на overlay.json рядом
@@ -284,7 +364,7 @@ def draw(spec: Spec, folder: Path) -> None:
     check_print(spec, drawn)
     basemap = [d for d in drawn if d.role.level == "basemap"]
     if not basemap:  # MAPS.md, раздел 7 допускает карту без подложки, контракт overlay — нет (basemap обязателен)
-        raise ValueError(f"{spec.path}: в охвате нет подложки, а overlay 1.0.0 требует basemap (вопрос к контракту)")
+        raise ValueError(f"{spec.path}: в охвате нет подложки, а overlay 1.1.0 требует basemap")
     north = False  # подложка есть, север вверху: стрелки нет (MAPS.md, раздел 7)
     if spec.north is not None and spec.north != north:
         raise ValueError(f"{spec.path}: north: {spec.north}, по правилу MAPS.md, раздел 7 — {north} "
@@ -295,17 +375,21 @@ def draw(spec: Spec, folder: Path) -> None:
             layout.itemById(element).setVisibility(False)
     item.setLayers([d.layer for d in basemap])
     item.setExtent(rect)
-    layout.refresh()
-    export_png(layout, folder / spec.out.name, std["export"]["dpi"])
+
+    def raster(rects: list) -> list:
+        """Подложка в PNG с подписями в обход rects (мм); рамки подписей подложки, мм."""
+        blockers(layout, rects)
+        layout.refresh()
+        export_png(layout, folder / spec.out.name, std["export"]["dpi"])
+        return basemap_labels(item, rect, spec, std["export"]["dpi"])
+
     doc = provenance(spec, std, style, basemap)
     (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
                                                    encoding="utf-8")
-
     entries = {d.role.key: layer_entry(d) for d in drawn if d.role.level != "basemap"}
     bounds = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-    obstacles = basemap_labels(item, rect, spec, std["export"]["dpi"])
     data, unplaced = overlay.build(spec, std, style, drawn, legend(spec, std, drawn), entries, north, layout, bounds,
-                                   spec.out.name, obstacles)
+                                   spec.out.name, raster, street_cut(std, drawn))
     for text in unplaced:
         print(f"{spec.path.name}: подпись не встала без наездов: {text}")
     (folder / spec.overlay_out.name).write_text(overlay.dumps(data), encoding="utf-8")

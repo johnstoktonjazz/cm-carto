@@ -151,7 +151,7 @@ def rows(project: Project, origin_id: str, mode: str, minutes: list[float]) -> l
         words = spec["speed_label"].format(speed=f"{speed:g}".replace(".", ","), min=f"{min(class_speeds):g}",
                                            max=f"{max(class_speeds):g}")
         row = {"object_id": object_id(origin_id, mode, m), "kind": spec["kind"].format(minutes=f"{m:g}"),
-               "status": "reference",
+               "status": "calc",
                "source_label": p["labels"]["source"].format(roads_label=label, roads_date=date, speed=words),
                "source_date": date, "source_license": licence,
                "fact_ids": [spec["assumption_id"]] if spec["assumption_id"] else [],

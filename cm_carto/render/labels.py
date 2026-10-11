@@ -6,6 +6,9 @@
 без пробелов у кавычек внутри; первая буква — заглавная.
 
     clean('МБДОУ д/с 20 "Красная Шапочка"') == 'Детский сад №\\u00a020 «Красная Шапочка»'
+
+Подписи подложки (улицы, вода, зелень) — имена собственные: name() — только «ё», пробелы, кавычки и «№»; списки
+сокращений и строчных к ним не применяются («улица Средняя» остается). Геопакет хранит name как в источнике.
 """
 
 import re
@@ -71,6 +74,15 @@ def _outside_quotes(text: str, fn) -> str:
                 start = i + 1
     parts.append(fn(text[start:], start == 0) if depth == 0 else text[start:])
     return "".join(parts)
+
+
+def name(text: str) -> str:
+    """Подпись подложки по TEXT.md: без «ё», один пробел, кавычки «елочки», «№» и номер через неразрывный пробел."""
+    text = re.sub(r"\s+", " ", text.replace("ё", "е").replace("Ё", "Е")).strip()
+    text = quotes(text)
+    text = re.sub(r"([«„]) +", r"\1", text)
+    text = re.sub(r" +([»“])", r"\1", text)
+    return re.sub(rf"№[ {NBSP}]*(?=\d)", f"№{NBSP}", text)
 
 
 def clean(text: str) -> str:
