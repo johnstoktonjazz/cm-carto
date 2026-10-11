@@ -10,12 +10,10 @@ modes:
     speed_kmh: {express: null, main: 4.8, district: 4.8, local: 4.8, pedestrian: 4.8, service: 4.8, path: 4.8}
     assumption_id: ASM-9001        # временный, номер даст база (К-028); скорость пешком — допущение ASM
     kind: "изохрона {minutes} мин пешком"
-    speed_label: "{speed} км/ч"
   drive:
     speed_kmh: {express: 80, main: 50, district: 40, local: 30, pedestrian: null, service: 20, path: null}
     assumption_id: ASM-9002        # временный, номер даст база (К-028); скорости автомобиля — допущение ASM
     kind: "изохрона {minutes} мин на автомобиле"
-    speed_label: "{speed} км/ч в среднем по достижимой сети, по классам улиц от {min} до {max} км/ч"
 origin:
   point_snap_max_m: 100          # точка дальше этого от ближайшего отрезка графа — ошибка
   contour_boundary_tolerance_m: 25   # старт от контура: узлы графа не дальше этого от границы контура
@@ -23,7 +21,9 @@ isochrone:
   buffer_m: 40                   # полоса вокруг достижимых отрезков улиц, из которой строится полигон
   quad_segs: 8                   # сегментов на четверть окружности в закруглениях буфера
 labels:
-  source: "расчет картографа по графу {roads_label} от {roads_date}, {speed}"
+  # Без скорости и даты: скорость — допущение (assumption_id в fact_ids), дата — source_date. Число с единицей в подписи
+  # источника линтер верстки (C01) считает показателем без идентификатора.
+  source: "расчет картографа по графу {roads_label}"
 
 # Буферы (cm-carto buffer). Расстояний здесь нет: правило ссылается на запись NORM реестра проекта
 # (`registry/norms.yaml` от папки анкеты), расстояние берется из ее `value`. `match` подбирает объекты слоя

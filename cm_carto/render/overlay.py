@@ -406,7 +406,7 @@ class Overlay:
                     feature["leader_to"] = xy(leader)
                 features.append(feature)
             if features:
-                layers.append({"id": f"labels_{d.role.key}", "role": d.role.key, "kind": "label",
+                layers.append({"id": f"labels_{d.role.key}", "role": "label", "kind": "label",
                                "source_label": entries[d.role.key]["source"], "features": features})
         return list(reversed(layers))
 

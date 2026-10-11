@@ -1,6 +1,6 @@
 {
   "file": "_build/k1/k1.pptx",
-  "passed": true,
+  "passed": false,
   "slides": [
     {
       "n": 1,
@@ -18,11 +18,19 @@
       "n": 3,
       "id": "K1-03",
       "layout": "compare",
-      "issues": []
+      "issues": [
+        {
+          "severity": "error",
+          "rule": "T19",
+          "place": "footer_sources",
+          "message": "415 знаков при бюджете места 400",
+          "fix": "Сократить текст или разделить слайд; кегль не уменьшается"
+        }
+      ]
     }
   ],
   "package": [],
-  "errors": 0,
+  "errors": 1,
   "warnings": 0,
   "not_implemented": {},
   "notes": [

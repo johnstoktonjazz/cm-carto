@@ -144,15 +144,12 @@ def rows(project: Project, origin_id: str, mode: str, minutes: list[float]) -> l
     spec = p["modes"][mode]
     roads, origin, results = compute(project, origin_id, mode, minutes)
     label, date, licence = single(roads, "source_label"), single(roads, "source_date"), single(roads, "source_license")
-    class_speeds = [s for s in spec["speed_kmh"].values() if s is not None]
     out = []
     for m, (r, geom) in results.items():
         speed = round(r.length_m / r.travel_min * 60 / 1000, 1)
-        words = spec["speed_label"].format(speed=f"{speed:g}".replace(".", ","), min=f"{min(class_speeds):g}",
-                                           max=f"{max(class_speeds):g}")
         row = {"object_id": object_id(origin_id, mode, m), "kind": spec["kind"].format(minutes=f"{m:g}"),
                "status": "calc",
-               "source_label": p["labels"]["source"].format(roads_label=label, roads_date=date, speed=words),
+               "source_label": p["labels"]["source"].format(roads_label=label),
                "source_date": date, "source_license": licence,
                "fact_ids": [spec["assumption_id"]] if spec["assumption_id"] else [],
                "mode": mode, "minutes": float(m), "speed_kmh": speed, "origin_id": origin_id, "geometry": geom}

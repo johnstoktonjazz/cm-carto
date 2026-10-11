@@ -75,7 +75,7 @@
    ],
    "id": "labels_zoning",
    "kind": "label",
-   "role": "zoning",
+   "role": "label",
    "source_label": "КПТ SYN-KPT-0001, синтетический образец, не выписка Росреестра, данные вымышлены"
   },
   {

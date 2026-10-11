@@ -24,7 +24,7 @@
    "kind": "polygon",
    "role": "reach_walk",
    "simplify_mm": 0.1,
-   "source_label": "расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0 от 2026-09-23, 4,8 км/ч, ODbL 1.0",
+   "source_label": "расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0",
    "status": "calc"
   },
   {
@@ -79,7 +79,7 @@
    ],
    "id": "labels_point_2",
    "kind": "label",
-   "role": "point_2",
+   "role": "label",
    "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0"
   },
   {
@@ -91,7 +91,7 @@
    ],
    "id": "labels_point_1",
    "kind": "label",
-   "role": "point_1",
+   "role": "label",
    "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0"
   },
   {
@@ -105,7 +105,7 @@
     {"kind": "polygon", "role": "territory", "text": "Граница проекта планировки"}
    ],
    "role": "legend",
-   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0 от 2026-09-23, 4,8 км/ч, ODbL 1.0; синтетический образец: проект планировки, чертеж красных линий"
+   "source_label": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; Overture Maps Places 2026-09-23.0, CDLA-Permissive-2.0; расчет картографа по графу OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; синтетический образец: проект планировки, чертеж красных линий"
   },
   {
    "id": "scale_bar",

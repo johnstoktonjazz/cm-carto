@@ -144,8 +144,7 @@
       "required": [
         "speed_kmh",
         "assumption_id",
-        "kind",
-        "speed_label"
+        "kind"
       ],
       "additionalProperties": false,
       "properties": {
@@ -179,9 +178,6 @@
           "pattern": "^ASM-[0-9]{4}$"
         },
         "kind": {
-          "type": "string"
-        },
-        "speed_label": {
           "type": "string"
         }
       }

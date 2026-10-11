@@ -30,8 +30,7 @@ places:
       - - Улицы в изохроне 15 минут
         - {value: "38,09", unit: км, calc_id: CALC-00017, status: check}
         - {value: "58,95", unit: км, calc_id: CALC-00018, status: check}
-sources:
-  - "Overture Maps, выпуск 2026-09-23.0: улицы, железная дорога, станции, учреждения (OpenStreetMap, ODbL 1.0; Overture Places, CDLA-Permissive-2.0)"
+sources: []  # источники подложки — в подписи карты из provenance, слоев данных — в подвале из overlay (Д-053)
 notes: >
   Образец К1, карта 3: сравнение двух карт одного масштаба (1:30 000, место square_small) с одной легендой
   (compare_with, легенды двух overlay совпадают). cm-carto render по examples/taganrog/maps/k1-compare-a.yaml

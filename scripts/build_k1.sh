@@ -10,8 +10,8 @@
 # Верстка (cm-design, CM_DESIGN) только читается: ее пакеты cm_deck, qa, review работают из зеркала
 # _build/cm-design (копия нужных папок), потому что cm-deck пишет кеш в _build/ своего корня. Зависимости cm-deck
 # (python-pptx) — в окружении картографа; LibreOffice (soffice) и pdftoppm — системные.
-# Контракты для рендера и линтера (K02, контракт slide) — CM_CONTRACTS, иначе соседний клон ../cm-contracts, если в нем
-# есть slide, иначе подмодуль cm-contracts.
+# Контракты для рендера и линтера — CM_CONTRACTS, иначе подмодуль cm-contracts (закреплен на main; соседний клон может
+# стоять на ветке с неслитыми версиями).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +23,6 @@ MIRROR="$ROOT/_build/cm-design"
 cd "$ROOT"
 if [ -z "${CM_CONTRACTS:-}" ]; then
   CM_CONTRACTS="$ROOT/cm-contracts"
-  [ -f "$ROOT/../cm-contracts/contracts/slide/schema.json" ] && CM_CONTRACTS="$(cd "$ROOT/../cm-contracts" && pwd)"
 fi
 export CM_CONTRACTS
 

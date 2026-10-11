@@ -68,7 +68,7 @@ def test_isochrone_row_follows_the_contract(tmp_path):
     assert row["object_id"] == "isochrones:walk-10-transit_stops-osm-n1"
     assert (row["mode"], row["minutes"], row["speed_kmh"], row["origin_id"]) == ("walk", 10.0, 4.8, STOP)
     assert row["status"] == "calc" and row["source_license"] == "ODbL 1.0" and row["fact_ids"] == ["ASM-9001"]
-    assert row["source_label"] == "расчет картографа по графу тестовые улицы от 2026-10-11, 4,8 км/ч"
+    assert row["source_label"] == "расчет картографа по графу тестовые улицы"
     isochrone.save(project, [row])
     assert gpkg.check(project.part("analysis-isochrones")) == []
 

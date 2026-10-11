@@ -6,8 +6,7 @@ places:
   image_1:
     file: ../maps/images/k1-zoning.png
     overlay: ../maps/images/k1-zoning.overlay.json
-sources:
-  - "Кадастровый план территории SYN-KPT-0001 и проект планировки: синтетические образцы картографа, данные вымышлены, 10.2026"
+sources: []  # источники подложки — в подписи карты из provenance, слоев данных — в подвале из overlay (Д-053)
 notes: >
   Образец К1, карта 2: главная карта раздела, макет image_page (image_full верстка сняла, К-02, Д-048), место wide,
   легенда внутри, 1:5 000. cm-carto render по examples/taganrog/maps/k1-zoning.yaml; overlay.json
