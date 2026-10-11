@@ -1,0 +1,91 @@
+# Открытые реестры: имена столбцов выгрузок и раскладка в слои (cm_carto/fetch/registries.py).
+# Выгрузки берутся с порталов (из облака закрыты), кладутся в кеш командой `cm-carto fetch <project.yaml> <реестр> --file ... --date ...`.
+# Имена столбцов в `columns` — как в выгрузке; у ОКН они подтверждены чужим кодом, чтением набора (см. ПОДКЛЮЧЕНИЯ.md),
+# у остальных реестров сверяются с первой живой выгрузкой и правятся здесь, а не в коде.
+
+okn:
+  title: Единый государственный реестр объектов культурного наследия, портал opendata.mkrf.ru
+  label: "ЕГРОКН Минкультуры России (opendata.mkrf.ru), выгрузка {date}"
+  license: открытые данные портала opendata.mkrf.ru, условия портала
+  key_prefix: ""
+  delimiter: ","
+  columns:
+    registry_number: Номер в реестре
+    name: Объект
+    kind: Вид объекта
+    category: Категория историко-культурного значения
+    geo: На карте            # GeoJSON Point в тексте
+  category:
+    Федерального значения: federal
+    Регионального значения: regional
+    Местного (муниципального) значения: local
+    Выявленный объект культурного наследия: identified
+
+bus_gov:
+  title: bus.gov.ru, сведения об учреждениях
+  label: "bus.gov.ru, выгрузка {date}"
+  license: открытые данные bus.gov.ru, условия сайта
+  key_prefix: busgov-
+  delimiter: ";"
+  columns:
+    id: Идентификатор
+    name: Наименование
+    type: Тип учреждения
+    address: Адрес
+    capacity: Вместимость
+    lon: Долгота
+    lat: Широта
+  # подстрока в нижнем регистре в «Тип учреждения» или «Наименование» -> [слой, poi_type, kind]; первое совпадение
+  types:
+    детский сад: [poi_education, kindergarten, детский сад]
+    дошкольн: [poi_education, kindergarten, детский сад]
+    школа: [poi_education, school, школа]
+    общеобразовательн: [poi_education, school, школа]
+    лицей: [poi_education, school, школа]
+    гимназия: [poi_education, school, школа]
+    поликлиника: [poi_health, clinic, поликлиника или амбулатория]
+    амбулатор: [poi_health, clinic, поликлиника или амбулатория]
+    больница: [poi_health, hospital, больница]
+
+hotels:
+  title: Федеральный перечень классифицированных средств размещения
+  label: "Реестр классифицированных средств размещения, выгрузка {date}"
+  license: открытые данные реестра, условия портала
+  key_prefix: hotel-
+  delimiter: ";"
+  columns:
+    id: Регистрационный номер
+    name: Наименование
+    category: Категория
+    address: Адрес
+    capacity: Количество мест
+    lon: Долгота
+    lat: Широта
+  layer: [poi_hotels, hotel, гостиница]
+
+dtp:
+  title: Карточки ДТП (ГИБДД, stat.gibdd.ru; зеркало dtp-stat.ru), без участников и персональных данных
+  label: "ДТП, данные ГИБДД, выгрузка {date}"
+  license: открытые данные ГИБДД, условия портала
+  key_prefix: dtp-
+  delimiter: ";"
+  columns:
+    id: Номер карточки
+    date: Дата
+    dead: Погибло
+    injured: Ранено
+    lon: Долгота
+    lat: Широта
+  date_format: "%d.%m.%Y"
+
+rosstat:
+  title: Росстат, показатели муниципальных образований (длинная таблица)
+  label: "Росстат, выгрузка {date}"
+  license: открытые данные Росстата, условия сайта
+  delimiter: ";"
+  columns:
+    indicator: Показатель
+    unit: Единица измерения
+    year: Год
+    value: Значение
+    territory: ОКТМО

@@ -79,10 +79,16 @@ def download(project: Project, release: str) -> Path:
         table = table.replace_schema_metadata({"geo": json.dumps(GEO_METADATA)})
         pq.write_table(table, target, compression="zstd")
         print(f"overture {release}: {source}: {table.num_rows} записей")
+    providers = {}
+    for source in spec:
+        sources = pq.read_table(folder / (source.replace("/", "-") + ".parquet"), columns=["sources"]).to_pylist()
+        for record in sources:
+            first = record["sources"][0]
+            item = providers.setdefault(f"{source}: {first['dataset']}", {"license": first["license"], "records": 0})
+            item["records"] += 1
     info = {"source": "Overture Maps Foundation", "release": release, "downloaded": date.today().isoformat(),
-            "extent_wgs84": bounds,
-            "licenses": {s: i["license"] for s, i in spec.items()},
-            "datasets": {s: (folder / (s.replace("/", "-") + ".parquet")).name for s in spec}}
+            "extent_wgs84": bounds, "datasets": {s: i["license"] for s, i in spec.items()},
+            "first_source_of_records": dict(sorted(providers.items()))}
     marker.write_text(yaml.safe_dump(info, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return folder
 
@@ -200,7 +206,6 @@ def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area
     """Учреждения по группам из places (taxonomy.primary) и land_use (класс). Точка places внутри площадного объекта
     land_use той же группы — то же учреждение, остается объект land_use (в нем название и номер элемента OSM)."""
     rule = rules()["poi"]
-    layers = {}
     found = common.points(pick(land_use, rule["land_use"], ["Polygon", "MultiPolygon"]), area)
     rows = {name: [] for name in ["poi_education", "poi_health", "poi_culture", "poi_hotels", "poi_other"]}
     areas = {name: [] for name in rows}
@@ -220,7 +225,7 @@ def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area
         if any(a.contains(record.geometry) for a in areas[layer]):
             continue
         rows[layer].append({"key": f"ovt-{record.id}", "name": primary_name(record.names), "kind": kind, "label": label,
-                            "date": date, "license": rules()["overture"]["places_license"],
+                            "date": date, "license": rules()["overture"]["datasets"]["places/place"]["license"],
                             "geometry": record.geometry, "poi_type": poi_type, "confirmed_by": []})
     return {layer: common.table(layer, items, places.crs) for layer, items in rows.items()}
 

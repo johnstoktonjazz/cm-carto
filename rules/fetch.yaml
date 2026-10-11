@@ -4,15 +4,14 @@
 overture:
   # источник -> столбцы сырой выборки
   datasets:
-    transportation/segment: {columns: [id, names, subtype, class, subclass, road_flags, rail_flags, sources]}
-    base/water: {columns: [id, names, subtype, class, is_salt, sources]}
-    base/land: {columns: [id, names, subtype, class, sources]}
-    base/land_use: {columns: [id, names, subtype, class, sources]}
-    base/infrastructure: {columns: [id, names, subtype, class, sources]}
-    buildings/building: {columns: [id, names, subtype, class, num_floors, is_underground, sources]}
-    places/place: {columns: [id, names, basic_category, taxonomy, confidence, operating_status, addresses, sources]}
-  # лицензия набора places по правилам Overture (источники внутри — Meta, Foursquare, AllThePlaces и др.)
-  places_license: CDLA-Permissive-2.0
+    transportation/segment: {columns: [id, names, subtype, class, subclass, road_flags, rail_flags, sources], license: ODbL 1.0}
+    base/water: {columns: [id, names, subtype, class, is_salt, sources], license: ODbL 1.0}
+    base/land: {columns: [id, names, subtype, class, sources], license: ODbL 1.0}
+    base/land_use: {columns: [id, names, subtype, class, sources], license: ODbL 1.0}
+    base/infrastructure: {columns: [id, names, subtype, class, sources], license: ODbL 1.0}
+    buildings/building: {columns: [id, names, subtype, class, num_floors, is_underground, sources], license: ODbL 1.0}
+    places/place: {columns: [id, names, basic_category, taxonomy, confidence, operating_status, addresses, sources],
+                   license: CDLA-Permissive-2.0}   # условия Overture; источники внутри — Meta, Foursquare и др.
   # объекты Overture Places с уверенностью ниже порога и закрытые не берутся
   places_min_confidence: 0.5
 
@@ -324,3 +323,9 @@ blocks:
 reconcile:
   distance_m: 150         # объекты реестра и OSM ближе этого расстояния сверяются по названию
   name_similarity: 0.6    # доля общих слов названий (по меньшему названию)
+  # слова, не различающие учреждения: организационные формы и родовые слова; цифры остаются и должны совпадать
+  noise_words: [муниципальное, бюджетное, автономное, казенное, государственное, областное, городское, общеобразовательное,
+                образовательное, дошкольное, учреждение, организация, средняя, основная, начальная, школа, сош, оош,
+                нош, мбоу, маоу, моу, мкоу, гбоу, мбдоу, мадоу, мдоу, дс, детский, сад, гбуз, мбуз, больница,
+                поликлиника, амбулатория, отель, гостиница, имени, им, г, город, ростовской, области, no, n]
+  unconfirmed_note: "не подтверждено реестром"

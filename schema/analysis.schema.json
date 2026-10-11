@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cm-carto/analysis-rules",
+  "title": "Параметры пространственного анализа (rules/analysis.yaml)",
+  "type": "object",
+  "required": ["graph", "modes", "origin", "isochrone", "labels"],
+  "additionalProperties": false,
+  "properties": {
+    "graph": {
+      "type": "object",
+      "required": ["snap_tolerance_m"],
+      "additionalProperties": false,
+      "properties": {"snap_tolerance_m": {"type": "number", "exclusiveMinimum": 0}}
+    },
+    "modes": {
+      "type": "object",
+      "required": ["walk", "drive"],
+      "additionalProperties": false,
+      "properties": {"walk": {"$ref": "#/$defs/mode"}, "drive": {"$ref": "#/$defs/mode"}}
+    },
+    "origin": {
+      "type": "object",
+      "required": ["point_snap_max_m", "contour_boundary_tolerance_m"],
+      "additionalProperties": false,
+      "properties": {
+        "point_snap_max_m": {"type": "number", "exclusiveMinimum": 0},
+        "contour_boundary_tolerance_m": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "isochrone": {
+      "type": "object",
+      "required": ["buffer_m", "quad_segs", "simplify_m"],
+      "additionalProperties": false,
+      "properties": {
+        "buffer_m": {"type": "number", "exclusiveMinimum": 0},
+        "quad_segs": {"type": "integer", "minimum": 1},
+        "simplify_m": {"type": "number", "minimum": 0}
+      }
+    },
+    "labels": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {"source": {"type": "string"}}
+    }
+  },
+  "$defs": {
+    "mode": {
+      "type": "object",
+      "required": ["speed_kmh", "assumption_id", "kind", "speed_label"],
+      "additionalProperties": false,
+      "properties": {
+        "speed_kmh": {
+          "type": "object",
+          "required": ["express", "main", "district", "local", "pedestrian", "service", "path"],
+          "additionalProperties": false,
+          "patternProperties": {"^(express|main|district|local|pedestrian|service|path)$": {"type": ["number", "null"], "exclusiveMinimum": 0}}
+        },
+        "assumption_id": {"type": ["string", "null"], "pattern": "^ASM-[0-9]{4}$"},
+        "kind": {"type": "string"},
+        "speed_label": {"type": "string"}
+      }
+    }
+  }
+}
