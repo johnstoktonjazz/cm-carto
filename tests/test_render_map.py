@@ -52,7 +52,8 @@ def frames() -> dict[str, gpd.GeoDataFrame]:
             ("far", Point(X + 9000, Y + 9000), {**OSM, "poi_type": "school", "name": "Далекая школа",
                                                 "source_label": "источник вне охвата"}),
         ]),
-        "poi_other": rows("poi_other", [(f"o{i}", Point(X - 400 + i * 120, Y - 380), {**OSM, "poi_type": "shop",
+        # Магазины выше нижнего края на 18 мм: левый нижний угол свободен для линейки (правый занят изохроной, Д-054).
+        "poi_other": rows("poi_other", [(f"o{i}", Point(X - 400 + i * 120, Y - 260), {**OSM, "poi_type": "shop",
                                                                                      "name": f"Магазин {i}"})
                                         for i in range(6)]),
         "zouit": rows("zouit", [("z1", box(X + 300, Y + 300, X + 600, Y + 600), {**OFFICIAL, "zouit_type": "sanitary"})]),
