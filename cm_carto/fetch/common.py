@@ -40,7 +40,8 @@ class Names:
     def overture(self, names) -> str | None:
         if names is None:
             return None
-        return self.pick(dict(names["common"] or []).get(self.language), names["primary"])
+        translated = names["common"]
+        return self.pick(None if translated is None else dict(translated).get(self.language), names["primary"])
 
     def osm(self, row: dict) -> str | None:
         local, primary = row.get(f"name:{self.language}"), row.get("name")

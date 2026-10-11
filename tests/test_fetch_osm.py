@@ -57,3 +57,10 @@ def test_part_passes_contract_and_is_reproducible(proj, tmp_path):
 def test_file_needs_date(proj, tmp_path):
     with pytest.raises(ValueError, match="--date"):
         osm.download(proj, tmp_path / "data.osm", None)
+
+
+def test_name_in_project_language(proj, tmp_path):
+    osm.download(proj, tmp_path / "data.osm", "2026-10-01")
+    # в данных основное название на другом языке, `name:ru` есть — берется оно; без него остается `name`
+    assert list(osm.layout(proj)["transit_stops"]["name"]) == ["Первая улица"]
+    assert osm.layout(proj)["roads"].set_index("object_id").loc["roads:osm-w1", "name"] == "Первая улица"

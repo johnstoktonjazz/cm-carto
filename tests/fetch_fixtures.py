@@ -53,7 +53,7 @@ def osm_xml() -> str:
     way([(38.006, 47.004), (38.0065, 47.004), (38.0065, 47.0045), (38.006, 47.0045)], {"leisure": "park"}, closed=True)
     way([(38.0045, 47.004), (38.0048, 47.004), (38.0048, 47.0042), (38.0045, 47.0042)],
         {"natural": "water", "water": "pond"}, closed=True)
-    node(38.0042, 47.0021, {"highway": "bus_stop", "name": "Первая улица"})
+    node(38.0042, 47.0021, {"highway": "bus_stop", "name": "Перша вулиця", "name:ru": "Первая улица"})
     node(38.0052, 47.0041, {"amenity": "hospital", "name": "Больница"})
     return ('<?xml version="1.0" encoding="UTF-8"?><osm version="0.6" generator="test">'
             + "".join(nodes) + "".join(ways) + "</osm>")

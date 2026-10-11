@@ -2,8 +2,8 @@
   "file": "k1-compare-a.png",
   "kind": "map",
   "title": "От станции Таганрог-II",
-  "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
-  "date": "2026-09-23",
+  "source": "OpenStreetMap через Overture Maps 2026-09-23.0, ODbL 1.0; синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+  "date": "2026-10-11",
   "status": "reference",
   "size_mm": {
     "width": 91.37,
@@ -11,7 +11,7 @@
   },
   "dpi": 300,
   "crs": "EPSG:32637",
-  "scale": "1:20 000",
+  "scale": "1:30 000",
   "layers": [
     {
       "name": "Магистральная улица",
@@ -39,9 +39,9 @@
     },
     {
       "name": "Кварталы",
-      "source": "OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
+      "source": "синтетический образец: проект планировки, чертеж красных линий; OpenStreetMap через Overture Maps 2026-09-23.0, кварталы по улицам, ODbL 1.0",
       "status": "reference",
-      "date": "2026-09-23"
+      "date": "2026-10-11"
     }
   ]
 }

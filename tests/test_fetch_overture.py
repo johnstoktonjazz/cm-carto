@@ -119,3 +119,34 @@ def test_cache_for_other_extent_is_error(cached):
     other = project.load(project_file(cached.root, extent_wgs84=[38.0, 47.0, 38.5, 47.5]))
     with pytest.raises(ValueError, match="кеш снят на охват"):
         overture.download(other, RELEASE)
+
+
+def test_names_in_project_language_and_composite_count():
+    names = common.Names("ru")
+    both = {"primary": "Таганрогский залив / Таганрозька затока", "common": [("uk", "Таганрозька затока"), ("ru", "Таганрогский залив")]}
+    assert names.overture(both) == "Таганрогский залив" and names.composite == 0
+    # нет названия на языке проекта: основное остается как есть, составное считается
+    assert names.overture({"primary": "Азовське море - Азовское море", "common": [("uk", "Азовське море")]}) \
+        == "Азовське море - Азовское море"
+    assert names.overture({"primary": "Школа 5", "common": None}) == "Школа 5" and names.composite == 1
+    assert names.overture(None) is None
+    assert names.osm({"name": "A / Б", "name:ru": float("nan")}) == "A / Б" and names.composite == 2
+    assert names.osm({"name": "Б", "name:ru": "В"}) == "В"
+
+
+def test_block_is_whole_cell_between_street_strips():
+    # сетка улиц 200 м: квартал в середине — вся ячейка за вычетом полос улиц, без потерь внутри (проверка по геометрии)
+    import geopandas as gpd
+    import shapely
+
+    half = common.rules()["blocks"]["half_width_m"]
+    xs = [0, 200, 400, 600]
+    lines = [shapely.LineString([(x, -100), (x, 700)]) for x in xs] + [shapely.LineString([(-100, y), (700, y)]) for y in xs]
+    streets = gpd.GeoDataFrame({"road_class": ["local", "main"] * 4}, geometry=lines, crs="EPSG:32637")
+    area = shapely.box(-300, -300, 900, 900)
+    found = common.blocks(streets, None, area, "метка", "2026-01-01", "лицензия")
+    assert len(found) == 9
+    # ячейка 200..400: слева улица main (x=200), справа local (x=400); то же по y
+    cell = found[found.contains(shapely.Point(300, 300))].geometry.iloc[0]
+    expected = (200 - half["main"] - half["local"]) ** 2
+    assert abs(cell.area - expected) < 1e-6
