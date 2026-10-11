@@ -187,17 +187,19 @@ def map_status(spec: Spec, std: dict, drawn: list[Drawn]) -> str:
     return weakest(subject)
 
 
+def layer_entry(d: Drawn) -> dict:
+    """Слой на карте: строка легенды, источники, самый слабый статус и самая поздняя дата объектов в охвате."""
+    return {"name": d.role.title, "source": "; ".join(sources(d.rows)),
+            "status": weakest(row["status"] for row in d.rows), "date": max(row["source_date"] for row in d.rows)}
+
+
 def provenance(spec: Spec, std: dict, style: dict, drawn: list[Drawn]) -> dict:
     """Описание подложки по контракту image: слои, источник и дата — только подложки; статус — карты целиком."""
-    layers, all_sources = [], []
-    for d in (d for d in drawn if d.role.level == "basemap"):
-        layer_sources = sources(d.rows)
-        all_sources += [s for s in layer_sources if s not in all_sources]
-        layers.append({"name": d.role.title, "source": "; ".join(layer_sources),
-                       "status": weakest(row["status"] for row in d.rows),
-                       "date": max(row["source_date"] for row in d.rows)})
-    if not layers:
-        raise ValueError(f"{spec.path}: в охвате нет подложки")
+    basemap = [d for d in drawn if d.role.level == "basemap"]
+    layers = [layer_entry(d) for d in basemap]
+    all_sources = []
+    for d in basemap:
+        all_sources += [s for s in sources(d.rows) if s not in all_sources]
     scale = overlay.number(spec.scale, style)
     doc = {"file": spec.out.name, "kind": "map"}
     if spec.title:
@@ -281,11 +283,17 @@ def draw(spec: Spec, folder: Path) -> None:
         layout.refresh()
         export_png(layout, folder / entry["file"], std["export"]["dpi"])
 
-    doc = provenance(spec, std, style, drawn)
-    (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
-                                                   encoding="utf-8")
+    basemap = None
+    if runs:  # карта без подложки (MAPS.md, раздел 7: тогда стрелка севера) — только overlay на белом
+        basemap = spec.out.name
+        doc = provenance(spec, std, style, drawn)
+        (folder / spec.provenance_out.name).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+                                                       encoding="utf-8")
+    else:
+        map_status(spec, std, drawn)
     bounds = (rect.xMinimum(), rect.yMinimum(), rect.xMaximum(), rect.yMaximum())
-    data = overlay.build(spec, std, style, drawn, items, north, layout, bounds, spec.out.name)
+    layers = [{"role": d.role.key} | layer_entry(d) for d in drawn if d.role.level != "basemap"]
+    data = overlay.build(spec, std, style, drawn, items, layers, north, layout, bounds, basemap)
     (folder / spec.overlay_out.name).write_text(overlay.dumps(data), encoding="utf-8")
     project.clear()
 

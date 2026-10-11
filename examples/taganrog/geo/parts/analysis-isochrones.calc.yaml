@@ -1,0 +1,50 @@
+- kind: calc
+  status: check
+  inputs: &id001 []
+  subject: isochrones:walk-10-transit_stops-osm-n1501726533, длина достижимой сети
+  value: 13.22
+  unit: км
+  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от transit_stops:osm-n1501726533
+    по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
+    2 м
+  sources: &id002
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:transit_stops
+    label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  status: check
+  inputs: *id001
+  subject: isochrones:walk-10-transit_stops-osm-n1501726533, площадь
+  value: 87.01
+  unit: га
+  formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин пешком от transit_stops:osm-n1501726533 по графу улиц (слой
+    roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
+  sources: *id002
+- kind: calc
+  status: check
+  inputs: &id003 []
+  subject: isochrones:walk-10-transit_stops-osm-n9683398095, длина достижимой сети
+  value: 26.53
+  unit: км
+  formula: сумма длин частей отрезков слоя roads, достижимых за 10 мин, м / 1000; изохрона 10 мин пешком от transit_stops:osm-n9683398095
+    по графу улиц (слой roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до
+    2 м
+  sources: &id004
+  - doc_id: geopackage:fetch-overture:roads
+    label: слой roads, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+  - doc_id: geopackage:fetch-overture:transit_stops
+    label: слой transit_stops, OpenStreetMap через Overture Maps 2026-09-23.0, выгрузка 2026-09-23
+    doc_status: reference
+- kind: calc
+  status: check
+  inputs: *id003
+  subject: isochrones:walk-10-transit_stops-osm-n9683398095, площадь
+  value: 132.23
+  unit: га
+  formula: площадь полигона изохроны, м2 / 10000; изохрона 10 мин пешком от transit_stops:osm-n9683398095 по графу улиц (слой
+    roads), средняя скорость 4,8 км/ч, полоса 40 м вокруг достижимых частей отрезков, контур упрощен до 2 м
+  sources: *id004

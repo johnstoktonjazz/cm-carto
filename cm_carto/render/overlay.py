@@ -162,7 +162,8 @@ def scale_bar(std: dict, style: dict, spec, layout) -> dict:
             "labels": labels, "position": position(layout.itemById("scalebar"))}
 
 
-def build(spec, std: dict, style: dict, drawn: list, stack: list, north: bool, layout, rect, basemap: str) -> dict:
+def build(spec, std: dict, style: dict, drawn: list, stack: list, layers: list, north: bool, layout, rect,
+          basemap: str | None) -> dict:
     """overlay.json: стопка слоев, объекты, подписи, легенда, линейка, север."""
     matrix = to_mm(spec.scale, rect)
     width, height = spec.size_mm
@@ -202,6 +203,7 @@ def build(spec, std: dict, style: dict, drawn: list, stack: list, north: bool, l
         "crs": spec.project.crs_name,
         "scale": spec.scale,
         "extent": rounded([xmin, ymin, xmax, ymax]),
+        "layers": layers,
         "features": features,
         "labels": labels,
         "legend": legend(std, drawn, spec, layout),
