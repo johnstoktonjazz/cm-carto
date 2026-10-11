@@ -9,7 +9,7 @@ WEST, SOUTH, EAST, NORTH = 38.000, 47.000, 38.010, 47.009
 
 def project_file(folder: Path, **extra) -> Path:
     data = {"name": "синтетический проект", "crs": {"name": "EPSG:32637", "definition": "EPSG:32637"},
-            "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", **extra}
+            "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", "language": "ru", **extra}
     path = folder / "project.yaml"
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return path
@@ -94,7 +94,7 @@ def overture_cache(project) -> Path:
     flags = [{"values": ["is_tunnel"], "between": [0.9, 1.0]}]
     cols = overture.rules()["overture"]["datasets"]
     save("transportation-segment", cols["transportation/segment"]["columns"], [
-        {"id": "seg-1", "names": {"primary": "Первая улица"}, "subtype": "road", "class_": None, "class": "secondary",
+        {"id": "seg-1", "names": {"primary": "Первая улица", "common": None}, "subtype": "road", "class_": None, "class": "secondary",
          "road_flags": flags, "geometry": line((w, 47.002), (e, 47.002)),
          "sources": [source("w1@3", [0.0, 0.5]), source("w2@1", [0.5, 1.0])]},
         {"id": "seg-2", "subtype": "road", "class": "residential", "geometry": line((w, 47.006), (e, 47.006)),
@@ -127,13 +127,13 @@ def overture_cache(project) -> Path:
          "sources": [source("w52@1")]},
     ])
     save("base-land_use", cols["base/land_use"]["columns"], [
-        {"id": "lu-1", "names": {"primary": "Школа №5"}, "subtype": "education", "class": "school",
+        {"id": "lu-1", "names": {"primary": "Школа №5", "common": None}, "subtype": "education", "class": "school",
          "geometry": rect(38.005, 47.003, 38.0055, 47.0035), "sources": [source("w60@1")]},
         {"id": "lu-2", "subtype": "park", "class": "park", "geometry": rect(38.006, 47.004, 38.0065, 47.0045),
          "sources": [source("w61@1")]},
     ])
     save("base-infrastructure", cols["base/infrastructure"]["columns"], [
-        {"id": "inf-1", "names": {"primary": "Первая улица"}, "subtype": "transit", "class": "bus_stop",
+        {"id": "inf-1", "names": {"primary": "Первая улица", "common": None}, "subtype": "transit", "class": "bus_stop",
          "geometry": shapely.Point(38.0042, 47.0021), "sources": [source("n70@2")]},
         {"id": "inf-2", "subtype": "transit", "class": "platform", "geometry": shapely.Point(38.0043, 47.0021),
          "sources": [source("n71@1")]},
@@ -148,16 +148,16 @@ def overture_cache(project) -> Path:
     place = {"operating_status": None, "basic_category": "x", "addresses": None}
     google = [source("abc=", dataset="meta", license="CDLA-Permissive-2.0")]
     save("places-place", cols["places/place"]["columns"], [
-        {**place, "id": "pl-1", "names": {"primary": "Школа 5"}, "taxonomy": {"primary": "school"}, "confidence": 0.9,
+        {**place, "id": "pl-1", "names": {"primary": "Школа 5", "common": None}, "taxonomy": {"primary": "school"}, "confidence": 0.9,
          "geometry": shapely.Point(38.00525, 47.00325), "sources": google},
-        {**place, "id": "pl-2", "names": {"primary": "Больница"}, "taxonomy": {"primary": "hospital"},
+        {**place, "id": "pl-2", "names": {"primary": "Больница", "common": None}, "taxonomy": {"primary": "hospital"},
          "confidence": 0.9, "geometry": shapely.Point(38.0052, 47.0041), "sources": google},
-        {**place, "id": "pl-3", "names": {"primary": "Редкая"}, "taxonomy": {"primary": "hospital"},
+        {**place, "id": "pl-3", "names": {"primary": "Редкая", "common": None}, "taxonomy": {"primary": "hospital"},
          "confidence": 0.1, "geometry": shapely.Point(38.0053, 47.0041), "sources": google},
-        {**place, "id": "pl-4", "names": {"primary": "Закрытая"}, "taxonomy": {"primary": "hospital"},
+        {**place, "id": "pl-4", "names": {"primary": "Закрытая", "common": None}, "taxonomy": {"primary": "hospital"},
          "confidence": 0.9, "geometry": shapely.Point(38.0054, 47.0041), "sources": google,
          "operating_status": "closed"},
-        {**place, "id": "pl-5", "names": {"primary": "Кафе"}, "taxonomy": {"primary": "cafe"}, "confidence": 0.9,
+        {**place, "id": "pl-5", "names": {"primary": "Кафе", "common": None}, "taxonomy": {"primary": "cafe"}, "confidence": 0.9,
          "geometry": shapely.Point(38.0055, 47.0041), "sources": google},
     ])
     import yaml
