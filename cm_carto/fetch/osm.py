@@ -84,7 +84,7 @@ def records(features: gpd.GeoDataFrame):
 
 
 def lines(features: gpd.GeoDataFrame, layer: str, column: str, classes: dict, label: str, date: str, area,
-          license: str) -> gpd.GeoDataFrame:
+          license: str, names: common.Names) -> gpd.GeoDataFrame:
     """Линейные слои roads (highway) и rail (railway): класс по таблице, тоннель по тегам tunnel и covered."""
     rule = rules()[layer]
     attr = "road_class" if layer == "roads" else "rail_class"
@@ -101,7 +101,7 @@ def lines(features: gpd.GeoDataFrame, layer: str, column: str, classes: dict, la
         if geom is None:
             continue
         tunnel = tag(row, "tunnel") not in (None, "no") or tag(row, "covered") == "yes"
-        rows.append({"key": key, "name": tag(row, "name"), "kind": rule["kind"][value], "label": label, "date": date,
+        rows.append({"key": key, "name": names.osm(row), "kind": rule["kind"][value], "label": label, "date": date,
                      "license": license, "geometry": geom, attr: value, "tunnel": tunnel})
     return common.table(layer, rows, features.crs)
 
@@ -138,12 +138,13 @@ def layout(project: Project) -> dict[str, gpd.GeoDataFrame]:
     label = rules()["labels"]["osm_direct"].format(date=date)
     area = common.extent(project)
     rule = rules()
+    names = common.Names(project.language)
     tags = {k: True for k in rule["osm"]["tag_keys"] + ["natural"]}
     features = ox.features.features_from_xml(folder / "data.osm", tags=tags).to_crs(project.crs)
     features = features[~features.geometry.is_empty]
 
-    frames = {"roads": lines(features, "roads", "highway", rule["roads"]["classes"], label, date, area, license),
-              "rail": lines(features, "rail", "railway", rule["rail"]["classes"], label, date, area, license)}
+    frames = {"roads": lines(features, "roads", "highway", rule["roads"]["classes"], label, date, area, license, names),
+              "rail": lines(features, "rail", "railway", rule["rail"]["classes"], label, date, area, license, names)}
 
     stops = []
     for key, row, geom in records(features[features.geometry.geom_type == "Point"]):
@@ -153,14 +154,14 @@ def layout(project: Project) -> dict[str, gpd.GeoDataFrame]:
         if mode == "bus" and tag(row, "trolleybus") == "yes" and tag(row, "bus") != "yes":
             mode = "trolleybus"
         if mode is not None and geom.within(area):
-            stops.append({"key": key, "name": tag(row, "name"), "kind": rule["transit_stops"]["kind"][mode],
+            stops.append({"key": key, "name": names.osm(row), "kind": rule["transit_stops"]["kind"][mode],
                           "label": label, "date": date, "license": license, "geometry": geom, "mode": mode})
     frames["transit_stops"] = common.table("transit_stops", stops, features.crs)
 
     areal = common.clip_areas(features[features.geometry.geom_type.isin(["Polygon", "MultiPolygon"])], area)
     buildings, green, water = [], [], []
     for key, row, geom in records(areal):
-        base = {"key": key, "name": tag(row, "name"), "label": label, "date": date, "license": license,
+        base = {"key": key, "name": names.osm(row), "label": label, "date": date, "license": license,
                 "geometry": geom}
         if tag(row, "building") not in (None, "no"):
             buildings.append({**base, "kind": rule["buildings"]["kind"], "floors": levels(row),
@@ -184,13 +185,14 @@ def layout(project: Project) -> dict[str, gpd.GeoDataFrame]:
         found = find(row, rule["poi"]["osm"])
         if found is not None:
             layer, poi_type, kind = found
-            pois[layer].append({"key": key, "name": tag(row, "name"), "kind": kind, "label": label, "date": date,
+            pois[layer].append({"key": key, "name": names.osm(row), "kind": kind, "label": label, "date": date,
                                 "license": license, "geometry": geom, "poi_type": poi_type, "confirmed_by": []})
     frames |= {layer: common.table(layer, items, features.crs) for layer, items in pois.items()}
 
     streets = frames["roads"][~frames["roads"]["tunnel"]]
     frames["blocks"] = common.blocks(streets, shore, area, rule["labels"]["blocks_osm"].format(date=date), date,
                                      license)
+    print(f"названия без названия на языке {project.language}, составные: {names.composite}")
     return frames
 
 

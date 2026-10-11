@@ -22,6 +22,31 @@ def rules() -> dict:
     return yaml.safe_load(RULES.read_text(encoding="utf-8"))
 
 
+class Names:
+    """Названия на языке проекта: Overture `names.common[язык]`, OSM `name:<язык>`; иначе основное название.
+    Составные «А / Б» без названия на языке проекта остаются как есть и считаются в `composite`."""
+
+    def __init__(self, language: str):
+        self.language = language
+        self.composite = 0
+
+    def pick(self, local: str | None, primary: str | None) -> str | None:
+        if local:
+            return local
+        if primary and any(sep in primary for sep in rules()["names"]["composite_separators"]):
+            self.composite += 1
+        return primary
+
+    def overture(self, names) -> str | None:
+        if names is None:
+            return None
+        return self.pick(dict(names["common"] or []).get(self.language), names["primary"])
+
+    def osm(self, row: dict) -> str | None:
+        local, primary = row.get(f"name:{self.language}"), row.get("name")
+        return self.pick(local if local == local else None, primary if primary == primary else None)
+
+
 def extent(project: Project) -> shapely.Polygon:
     """Охват из project.yaml в системе координат проекта; стороны разбиты, чтобы дуги параллелей не спрямлялись."""
     box = gpd.GeoSeries([shapely.box(*project.extent_wgs84)], crs="EPSG:4326").segmentize(0.001)

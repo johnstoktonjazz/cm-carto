@@ -307,6 +307,10 @@ osm:
     train_station: transportation
     transportation: transportation
 
+names:
+  # составное название «А / Б» (два языка в одном теге); без названия на языке проекта оставляется и считается
+  composite_separators: [" / ", " - "]
+
 blocks:
   kind: квартал по улично-дорожной сети
   # классы road_class, образующие кварталы, и полуширина улицы от оси, м

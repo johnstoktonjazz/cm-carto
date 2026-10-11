@@ -9,6 +9,7 @@
     extent_wgs84: [xmin, ymin, xmax, ymax]   # охват выгрузок внешних источников, градусы
     geo: 00_База_знаний/geo                   # папка геоданных проекта от папки анкеты
     inputs: 01_Исходные                       # образцы и кеш внешних источников от папки анкеты
+    language: ru                              # язык названий объектов из внешних источников
     fetch:
       overture_release: 2026-09-23.0          # выпуск Overture Maps для fetch overture
 """
@@ -41,6 +42,10 @@ class Project:
     def extent_wgs84(self) -> tuple[float, float, float, float]:
         xmin, ymin, xmax, ymax = self.data["extent_wgs84"]
         return float(xmin), float(ymin), float(xmax), float(ymax)
+
+    @property
+    def language(self) -> str:
+        return self.data["language"]
 
     @property
     def geo(self) -> Path:

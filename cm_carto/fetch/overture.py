@@ -100,10 +100,6 @@ def read(folder: Path, source: str, project: Project) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(frame.rename(columns={"class": "class_"}), geometry=geometry)
 
 
-def primary_name(names) -> str | None:
-    return names["primary"] if names is not None else None
-
-
 def source_key(source, gers_id: str) -> str:
     """Ключ object_id: номер элемента OSM из record_id, иначе идентификатор GERS."""
     if source["dataset"] == "OpenStreetMap" and source["record_id"] is not None:
@@ -145,7 +141,8 @@ def pieces(segment, flags, sources):
             yield owner[0], bool(values & set(rules()["flags"]["tunnel"])), line
 
 
-def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, release: str, area, date: str):
+def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, release: str, area, date: str,
+          names: common.Names):
     """Слои roads и rail: сегменты Overture режутся по исходным элементам OSM и тоннелям, участки одного элемента
     собираются обратно в одну запись `слой:osm-w123` (тоннельный участок — с суффиксом -t)."""
     rule = rules()[layer]
@@ -157,7 +154,7 @@ def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, relea
         value = rule["classes"][segment.class_]
         for source, tunnel, line in pieces(segment, getattr(segment, flags_column), segment.sources):
             key = source_key(source, segment.id)
-            group = groups.setdefault((key, tunnel), {"value": value, "lines": [], "name": primary_name(segment.names),
+            group = groups.setdefault((key, tunnel), {"value": value, "lines": [], "name": names.overture(segment.names),
                                                        "license": common.license_name(source["license"]),
                                                        "label": origin([source], segment.id, release)[1]})
             if group["value"] != value:
@@ -174,12 +171,12 @@ def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, relea
     return common.table(layer, rows, segments.crs)
 
 
-def polygons(frame: gpd.GeoDataFrame, layer: str, release: str, area, date: str, attrs) -> gpd.GeoDataFrame:
+def polygons(frame: gpd.GeoDataFrame, layer: str, release: str, area, date: str, attrs, names: common.Names) -> gpd.GeoDataFrame:
     """Слой площадных объектов: ключ и подпись — из источника записи, attrs(record) — kind и атрибуты слоя."""
     rows = []
     for record in common.clip_areas(frame, area).itertuples():
         key, label, license = origin(record.sources, record.id, release)
-        rows.append({"key": key, "name": primary_name(record.names), "label": label, "date": date, "license": license,
+        rows.append({"key": key, "name": names.overture(record.names), "label": label, "date": date, "license": license,
                      "geometry": record.geometry, **attrs(record)})
     return common.table(layer, rows, frame.crs)
 
@@ -189,7 +186,7 @@ def pick(frame: gpd.GeoDataFrame, mapping: dict, geometry: list[str]) -> gpd.Geo
     return frame[frame["class_"].isin(mapping) & frame.geometry.geom_type.isin(geometry)]
 
 
-def stops(infrastructure: gpd.GeoDataFrame, release: str, area, date: str) -> gpd.GeoDataFrame:
+def stops(infrastructure: gpd.GeoDataFrame, release: str, area, date: str, names: common.Names) -> gpd.GeoDataFrame:
     rule = rules()["transit_stops"]
     found = common.points(infrastructure[(infrastructure["subtype"] == "transit")
                                   & infrastructure["class_"].isin(rule["classes"])], area)
@@ -197,12 +194,12 @@ def stops(infrastructure: gpd.GeoDataFrame, release: str, area, date: str) -> gp
     for record in found.itertuples():
         key, label, license = origin(record.sources, record.id, release)
         mode = rule["classes"][record.class_]
-        rows.append({"key": key, "name": primary_name(record.names), "kind": rule["kind"][mode], "label": label,
+        rows.append({"key": key, "name": names.overture(record.names), "kind": rule["kind"][mode], "label": label,
                      "date": date, "license": license, "geometry": record.geometry, "mode": mode})
     return common.table("transit_stops", rows, found.crs)
 
 
-def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area, date: str) -> dict:
+def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area, date: str, names: common.Names) -> dict:
     """Учреждения по группам из places (taxonomy.primary) и land_use (класс). Точка places внутри площадного объекта
     land_use той же группы — то же учреждение, остается объект land_use (в нем название и номер элемента OSM)."""
     rule = rules()["poi"]
@@ -212,7 +209,7 @@ def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area
     for record in found.itertuples():
         layer, poi_type, kind = rule["land_use"][record.class_]
         key, label, license = origin(record.sources, record.id, release)
-        rows[layer].append({"key": key, "name": primary_name(record.names), "kind": kind, "label": label, "date": date,
+        rows[layer].append({"key": key, "name": names.overture(record.names), "kind": kind, "label": label, "date": date,
                             "license": license, "geometry": record.geometry, "poi_type": poi_type, "confirmed_by": []})
         areas[layer].append(land_use.geometry[record.Index])
     minimum = rules()["overture"]["places_min_confidence"]
@@ -224,7 +221,7 @@ def poi(places: gpd.GeoDataFrame, land_use: gpd.GeoDataFrame, release: str, area
         layer, poi_type, kind = rule["places"][record.taxonomy["primary"]]
         if any(a.contains(record.geometry) for a in areas[layer]):
             continue
-        rows[layer].append({"key": f"ovt-{record.id}", "name": primary_name(record.names), "kind": kind, "label": label,
+        rows[layer].append({"key": f"ovt-{record.id}", "name": names.overture(record.names), "kind": kind, "label": label,
                             "date": date, "license": rules()["overture"]["datasets"]["places/place"]["license"],
                             "geometry": record.geometry, "poi_type": poi_type, "confirmed_by": []})
     return {layer: common.table(layer, items, places.crs) for layer, items in rows.items()}
@@ -236,33 +233,35 @@ def layout(project: Project, release: str) -> dict[str, gpd.GeoDataFrame]:
     area = common.extent(project)
     date = release_date(release)
     rule = rules()
+    names = common.Names(project.language)
 
     segments = read(folder, "transportation/segment", project)
-    frames = {"roads": lines(segments, "road", "roads", "road_class", release, area, date),
-              "rail": lines(segments, "rail", "rail", "rail_class", release, area, date)}
-    frames["transit_stops"] = stops(read(folder, "base/infrastructure", project), release, area, date)
+    frames = {"roads": lines(segments, "road", "roads", "road_class", release, area, date, names),
+              "rail": lines(segments, "rail", "rail", "rail_class", release, area, date, names)}
+    frames["transit_stops"] = stops(read(folder, "base/infrastructure", project), release, area, date, names)
     frames["buildings_osm"] = polygons(
         read(folder, "buildings/building", project), "buildings_osm", release, area, date,
         lambda r: {"kind": rule["buildings"]["kind"], "building_use": r.subtype,
-                   "floors": None if r.num_floors != r.num_floors else int(r.num_floors)})
+                   "floors": None if r.num_floors != r.num_floors else int(r.num_floors)}, names)
 
     green = rule["green"]["classes"]
     land_use, land = read(folder, "base/land_use", project), read(folder, "base/land", project)
     frames["green"] = polygons(
         pd.concat([pick(land_use, green, ["Polygon", "MultiPolygon"]), pick(land, green, ["Polygon", "MultiPolygon"])]),
         "green", release, area, date,
-        lambda r: {"green_class": green[r.class_], "kind": rule["green"]["kind"][green[r.class_]]})
+        lambda r: {"green_class": green[r.class_], "kind": rule["green"]["kind"][green[r.class_]]}, names)
     water = rule["water"]["classes"]
     frames["water"] = common.disjoint(polygons(
         pick(read(folder, "base/water", project), water, ["Polygon", "MultiPolygon"]), "water", release, area, date,
-        lambda r: {"water_class": water[r.class_], "kind": rule["water"]["kind"][water[r.class_]]}), "water_class", "sea")
+        lambda r: {"water_class": water[r.class_], "kind": rule["water"]["kind"][water[r.class_]]}, names), "water_class", "sea")
 
-    frames |= poi(read(folder, "places/place", project), land_use, release, area, date)
+    frames |= poi(read(folder, "places/place", project), land_use, release, area, date, names)
 
     sea = shapely.union_all(frames["water"].loc[frames["water"]["water_class"] == "sea", "geometry"].values)
     streets = frames["roads"][~frames["roads"]["tunnel"]]
     frames["blocks"] = common.blocks(streets, sea, area, rule["labels"]["blocks_overture"].format(release=release),
                                      date, streets["source_license"].iloc[0])
+    print(f"названия без названия на языке {project.language}, составные: {names.composite}")
     return frames
 
 
