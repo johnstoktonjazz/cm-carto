@@ -281,7 +281,7 @@ def layout(project: Project, release: str) -> dict[str, gpd.GeoDataFrame]:
 
     sea = shapely.union_all(frames["water"].loc[frames["water"]["water_class"] == "sea", "geometry"].values)
     streets = frames["roads"][~frames["roads"]["tunnel"]]
-    frames["blocks"] = common.blocks(streets, sea, area, rule["labels"]["blocks_overture"].format(release=release),
+    frames["blocks"] = common.blocks(streets, sea, area, rule["labels"]["osm_overture"].format(release=release),
                                      date, streets["source_license"].iloc[0])
     print(f"названия без названия на языке {project.language}, составные: {names.composite}")
     return frames

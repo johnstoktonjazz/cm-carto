@@ -190,7 +190,7 @@ def layout(project: Project) -> dict[str, gpd.GeoDataFrame]:
     frames |= {layer: common.table(layer, items, features.crs) for layer, items in pois.items()}
 
     streets = frames["roads"][~frames["roads"]["tunnel"]]
-    frames["blocks"] = common.blocks(streets, shore, area, rule["labels"]["blocks_osm"].format(date=date), date,
+    frames["blocks"] = common.blocks(streets, shore, area, rule["labels"]["osm_direct"].format(date=date), date,
                                      license)
     print(f"названия без названия на языке {project.language}, составные: {names.composite}")
     return frames

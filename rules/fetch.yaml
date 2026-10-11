@@ -20,8 +20,6 @@ labels:
   other_overture: "{dataset} через Overture Maps {release}"
   places: "Overture Maps Places {release}"
   osm_direct: "OpenStreetMap, выгрузка {date}"
-  blocks_overture: "OpenStreetMap через Overture Maps {release}, кварталы по улицам"
-  blocks_osm: "OpenStreetMap, выгрузка {date}, кварталы по улицам"
 
 licenses:            # как пишет источник -> как пишем мы
   ODbL-1.0: ODbL 1.0
