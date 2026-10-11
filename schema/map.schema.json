@@ -5,7 +5,13 @@
   "version": "1.0.0",
   "description": "Совместимо по смыслу с описанием карты верстки (cm_deck.qgis_render): те же place, center, scale, north, legend, layers.<роль>.title, out. Отличия: геопакет и система координат — из анкеты проекта (project, data), роль связана со слоем геопакета контракта geopackage и отбором (layer, where), источник, дата и статус в provenance собираются из данных, а не пишутся руками. Роли (ключи layers), места и ширины легенды — из cm-design/tokens/map.yaml, проверяются при загрузке.",
   "type": "object",
-  "required": ["place", "project", "legend", "layers", "out"],
+  "required": [
+    "place",
+    "project",
+    "legend",
+    "layers",
+    "out"
+  ],
   "additionalProperties": false,
   "properties": {
     "place": {
@@ -26,7 +32,9 @@
     },
     "center": {
       "type": "array",
-      "items": {"type": "number"},
+      "items": {
+        "type": "number"
+      },
       "minItems": 2,
       "maxItems": 2,
       "description": "центр карты [x, y] в системе координат проекта; вместе со scale"
@@ -38,25 +46,33 @@
     },
     "extent": {
       "type": "array",
-      "items": {"type": "number"},
+      "items": {
+        "type": "number"
+      },
       "minItems": 4,
       "maxItems": 4,
       "description": "охват [xmin, ymin, xmax, ymax] в системе координат проекта вместо center и scale: карта по центру охвата, масштаб — наименьший с двумя значащими цифрами, при котором охват виден целиком"
     },
     "north": {
       "type": "boolean",
-      "description": "стрелка севера; по правилу MAPS.md, раздел 7: включена, если на карте нет подложки (в охвате нет объектов слоев уровня basemap). Задано и расходится с правилом — ошибка"
+      "description": "стрелка севера; по правилу MAPS.md, раздел 7: включена, если на карте нет подложки — а overlay 1.0.0 требует подложку, поэтому сейчас всегда false. Задано и расходится с правилом — ошибка"
     },
     "legend": {
-      "type": ["integer", "string"],
-      "description": "ширина места легенды, мм (map.yaml: legend.widths; legend_<ширина>.qpt, отдельный файл SVG) или inside — легенда внутри карты (место из map.yaml: legend.inside.places)"
+      "type": [
+        "integer",
+        "string"
+      ],
+      "description": "ширина места легенды, мм (map.yaml: legend.widths): легенда снаружи, строками в overlay без координат — верстка ставит ее в свое место; или inside — легенда внутри места (map.yaml: legend.inside.places), legend_at в overlay"
     },
     "layers": {
       "type": "object",
       "minProperties": 1,
       "description": "роль на карте (ключ map.yaml: layers или zoning) → слой геопакета и отбор. Порядок отрисовки и легенды — порядок стандарта, не порядок здесь",
       "additionalProperties": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "additionalProperties": false,
         "properties": {
           "layer": {
@@ -80,17 +96,48 @@
     },
     "fact_ids": {
       "type": "array",
-      "items": {"type": "string", "pattern": "^(F-[0-9]{6}|CALC-[0-9]{5}|NORM-[0-9]{5}|ASM-[0-9]{4})$"},
+      "items": {
+        "type": "string",
+        "pattern": "^(F-[0-9]{6}|CALC-[0-9]{5}|NORM-[0-9]{5}|ASM-[0-9]{4})$"
+      },
       "description": "записи реестра, которые карта показывает (image: fact_ids)"
     },
     "out": {
       "type": "string",
       "pattern": "\\.png$",
-      "description": "карта PNG, путь от папки описания; рядом <имя>-legend.svg и <имя>.provenance.json"
+      "description": "подложка PNG, путь от папки описания; рядом <имя>.provenance.json (контракт image), <имя>.overlay.json (контракт overlay), с --preview — <имя>.preview.png"
     }
   },
   "oneOf": [
-    {"required": ["center", "scale"], "not": {"required": ["extent"]}},
-    {"required": ["extent"], "not": {"anyOf": [{"required": ["center"]}, {"required": ["scale"]}]}}
+    {
+      "required": [
+        "center",
+        "scale"
+      ],
+      "not": {
+        "required": [
+          "extent"
+        ]
+      }
+    },
+    {
+      "required": [
+        "extent"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "center"
+            ]
+          },
+          {
+            "required": [
+              "scale"
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

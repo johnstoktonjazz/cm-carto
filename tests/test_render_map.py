@@ -1,5 +1,6 @@
-"""Рендер карты по описанию на синтетическом геопакете: размер под место, provenance по контракту image,
-повтор байт в байт, отбор where, ошибки описания и печати, смена токена верстки меняет карту без правок кода."""
+"""Рендер карты по описанию на синтетическом геопакете: подложка PNG в размер места без слоев данных, provenance
+по контракту image, overlay по контракту overlay (мм места, упрощение, подписи без наездов), повтор байт в байт,
+отбор where, ошибки описания и печати, смена токена верстки меняет карту без правок кода."""
 
 import json
 import os
@@ -13,16 +14,18 @@ import pytest
 import yaml
 from PIL import Image
 from pyproj import CRS
-from shapely.geometry import LineString, Point, box
+from shapely import affinity
+from shapely.geometry import LineString, Point, Polygon, box
 
 from cm_carto import gpkg, paths, tokens
-from cm_carto.render import build
+from cm_carto.render import build, overlay
 
 CRS_NAME = "EPSG:32637"
 X, Y = 500000, 5000000
 COMMON = {"fact_ids": [], "source_date": "2026-10-01"}
 OFFICIAL = {**COMMON, "status": "official", "source_label": "синтетический чертеж, лист 1", "source_date": "2021-06-01"}
 OSM = {**COMMON, "status": "reference", "source_label": "синтетическая выгрузка OSM", "source_license": "ODbL 1.0"}
+CIRCLE = Point(X + 100, Y - 100).buffer(250, quad_segs=64)  # изохрона: много вершин для проверки упрощения
 
 
 def rows(layer: str, items: list[tuple[str, object, dict]]) -> gpd.GeoDataFrame:
@@ -48,7 +51,12 @@ def frames() -> dict[str, gpd.GeoDataFrame]:
             ("far", Point(X + 9000, Y + 9000), {**OSM, "poi_type": "school", "name": "Далекая школа",
                                                 "source_label": "источник вне охвата"}),
         ]),
+        "poi_other": rows("poi_other", [(f"o{i}", Point(X - 400 + i * 120, Y - 380), {**OSM, "poi_type": "shop",
+                                                                                     "name": f"Магазин {i}"})
+                                        for i in range(6)]),
         "zouit": rows("zouit", [("z1", box(X + 300, Y + 300, X + 600, Y + 600), {**OFFICIAL, "zouit_type": "sanitary"})]),
+        "isochrones": rows("isochrones", [("walk-10", CIRCLE, {**OSM, "mode": "walk", "minutes": 10.0,
+                                                              "source_label": "синтетический расчет"})]),
     }
 
 
@@ -73,7 +81,8 @@ def describe(folder, name="map", **changes) -> object:
             "layers": {"point_1": {"layer": "poi_education", "where": "poi_type = 'school'", "title": "Школы"},
                        "zone_sanitary": {"layer": "zouit", "where": "zouit_type = 'sanitary'"},
                        "territory": {"layer": "boundary_planning", "title": "Граница проекта планировки"},
-                       "road_main": {"layer": "roads", "where": "road_class = 'main'"},
+                       "reach_walk": {"layer": "isochrones", "title": "10 минут пешком"},
+                       "point_3": {"layer": "poi_other", "title": "Магазины"},
                        "blocks": {}},
             "title": "Школы у границы", "out": f"maps/{name}.png"}
     spec.update(changes)
@@ -82,37 +91,84 @@ def describe(folder, name="map", **changes) -> object:
     return path
 
 
-def provenance(png) -> dict:
-    return json.loads(png.with_name(png.stem + ".provenance.json").read_text(encoding="utf-8"))
+def side(project, name: str, suffix: str) -> dict:
+    return json.loads((project / "maps" / f"{name}{suffix}").read_text(encoding="utf-8"))
 
 
-def test_png_size_matches_place(project):
-    png = build.render(describe(project))[1]
+def layer(doc: dict, layer_id: str) -> dict:
+    return next(item for item in doc["layers"] if item["id"] == layer_id)
+
+
+def test_basemap_png_matches_place_and_has_no_data(project):
+    """Подложка — в размер места, без привязки и метаданных; слои данных на ней не нарисованы (нет цвета accent
+    границы территории), а в превью overlay граница есть."""
+    build.render(describe(project), preview=True)
     width, height = tokens.place_size_mm("square_small")
-    image = Image.open(png)
+    image = Image.open(project / "maps" / "map.png")
     assert abs(image.width - width / 25.4 * 300) <= 1
     assert abs(image.height - height / 25.4 * 300) <= 1
-    assert "dpi" in image.info and set(image.info) <= {"dpi"}  # без привязки и метаданных
+    assert "dpi" in image.info and set(image.info) <= {"dpi"}
+    accent = tuple(int(tokens.load("style")["colors"]["accent"][i:i + 2], 16) for i in (0, 2, 4))
+    assert accent not in {c for _, c in image.convert("RGB").getcolors(1 << 24)}
+    preview = Image.open(project / "maps" / "map.preview.png").convert("RGB")
+    assert accent in {c for _, c in preview.getcolors(1 << 24)}
 
 
-def test_provenance_passes_image_contract(project):
-    png = build.render(describe(project))[1]
-    doc = provenance(png)
-    schema = json.loads(paths.schema("image").read_text(encoding="utf-8"))
-    jsonschema.Draft202012Validator(schema).validate(doc)
-    assert (png.parent / doc["legend_file"]).is_file()
-    assert doc["scale"] == "1:10 000"
-    assert doc["status"] == "official"  # слои reference (школы, улица) в сводный статус не входят
-    assert doc["date"] == "2026-10-01"
-    assert [layer["name"] for layer in doc["layers"]] == [
-        "Школы", "Граница проекта планировки", "Санитарно-защитная зона", "Магистральная улица", "Кварталы"]
+def test_provenance_describes_basemap(project):
+    build.render(describe(project))
+    doc = side(project, "map", ".provenance.json")
+    jsonschema.Draft202012Validator(json.loads(paths.schema("image").read_text(encoding="utf-8"))).validate(doc)
+    assert doc["scale"] == "1:10 000" and doc["status"] == "official" and doc["date"] == "2021-06-01"
+    assert [entry["name"] for entry in doc["layers"]] == ["Кварталы"]
+    assert "legend_file" not in doc
 
 
-def test_where_selects_objects(project, capsys):
-    doc = provenance(build.render(describe(project))[1])
-    schools = doc["layers"][0]
-    assert schools["source"] == "синтетическая выгрузка OSM, ODbL 1.0"  # без сада (другой отбор) и школы вне охвата
+def test_overlay_passes_contract_and_names_follow_map_yaml(project):
+    build.render(describe(project))
+    doc = side(project, "map", ".overlay.json")
+    jsonschema.Draft202012Validator(json.loads(paths.schema("overlay").read_text(encoding="utf-8"))).validate(doc)
+    assert [item["id"] for item in doc["layers"]] == [
+        "zone_sanitary", "territory", "reach_walk", "point_3", "point_1", "labels_point_1", "legend", "scale_bar"]
+    assert doc["basemap"] == "map.png" and doc["place"]["name"] == "square_small"
+    assert [row["role"] for row in layer(doc, "legend")["legend"]] == [
+        "point_1", "point_3", "reach_walk", "territory", "zone_sanitary"]
+    assert layer(doc, "scale_bar")["scalebar"]["segments_m"] == [0, 100, 200]
+
+
+def test_known_object_lands_in_expected_mm(project):
+    """Угол территории (X − 200, Y + 190) при центре (X, Y), 1:10 000, место 91,37 × 88,9 мм: x = (456,85 − 200) / 10,
+    y = (444,5 − 190) / 10."""
+    build.render(describe(project))
+    ring = layer(side(project, "map", ".overlay.json"), "territory")["features"][0]["rings"][0]
+    assert any(abs(x - 25.685) <= 0.05 and abs(y - 25.45) <= 0.05 for x, y in ring)
+
+
+def test_simplification_within_tolerance(project):
+    build.render(describe(project))
+    doc = side(project, "map", ".overlay.json")
+    rings = layer(doc, "reach_walk")["features"][0]["rings"]
+    xmin, _, _, ymax = doc["map"]["extent"]
+    exact = affinity.affine_transform(CIRCLE, overlay.to_mm(10000, (xmin, 0, 0, ymax)))
+    simple = Polygon(rings[0], rings[1:])
+    assert len(rings[0]) < len(CIRCLE.exterior.coords)
+    assert exact.boundary.hausdorff_distance(simple.boundary) <= overlay.SIMPLIFY_MM + overlay.ROUND_MM
+
+
+def test_where_and_labels_follow_rules(project, capsys):
+    """Отбор where: сада и школы вне охвата нет; подписи — только у роли не больше max_features объектов
+    (школ 2 из 5 — подписаны, магазинов 6 — нет); подписи не задевают друг друга и знаки."""
+    build.render(describe(project))
     assert "point_1 ← poi_education (poi_type = 'school'): в охвате 2" in capsys.readouterr().out
+    doc = side(project, "map", ".overlay.json")
+    assert [f["id"] for f in layer(doc, "point_1")["features"]] == ["poi_education:s1", "poi_education:s2"]
+    labels = layer(doc, "labels_point_1")["features"]
+    assert [f["text"] for f in labels] == ["Школа 1", "Школа 2"] and {f["size_role"] for f in labels} == {"label"}
+    assert "labels_point_3" not in [item["id"] for item in doc["layers"]]
+    measure = overlay.Measure(tokens.load("map"), tokens.load("style"))
+    boxes = [overlay.text_box(f["at"], f["anchor"], measure.size(f["text"], f["size_role"]), (0, 0)) for f in labels]
+    marks = [Point(f["at"]).buffer(1.25) for item in doc["layers"] if item["kind"] == "point" for f in item["features"]]
+    assert not any(a.intersects(b) for i, a in enumerate(boxes) for b in boxes[i + 1:])
+    assert not any(a.intersects(m) for a in boxes for m in marks)
 
 
 RENDER = "import sys; from pathlib import Path; from cm_carto.render import build; " \
@@ -120,15 +176,24 @@ RENDER = "import sys; from pathlib import Path; from cm_carto.render import buil
 
 
 def test_repeat_is_byte_identical(project, tmp_path, capsys):
-    """Две сборки в разных процессах (затравка QHash у каждого своя) — те же PNG и SVG; повтор — из кеша."""
+    """Две сборки в разных процессах — те же PNG и overlay; повтор — из кеша."""
     for name in ("a", "b"):
         subprocess.run([sys.executable, "-c", RENDER, str(tmp_path / "cache"), str(describe(project, name))],
                        check=True)
     maps = project / "maps"
     assert (maps / "a.png").read_bytes() == (maps / "b.png").read_bytes()
-    assert (maps / "a-legend.svg").read_bytes() == (maps / "b-legend.svg").read_bytes()
+    a = (maps / "a.overlay.json").read_text(encoding="utf-8")
+    assert a.replace('"a.png"', '"b.png"') == (maps / "b.overlay.json").read_text(encoding="utf-8")
     build.render(describe(project, "a"))
     assert "из кеша" in capsys.readouterr().out
+
+
+def test_reference_basemap_is_refused(project):
+    """Подложка из OSM — reference, а в image: status его нет: provenance не выпускается (вопрос к контракту)."""
+    layers = yaml.safe_load(describe(project).read_text(encoding="utf-8"))["layers"]
+    layers["road_main"] = {"layer": "roads", "where": "road_class = 'main'"}
+    with pytest.raises(ValueError, match="статус подложки reference"):
+        build.render(describe(project, "osm", layers=layers))
 
 
 def test_unknown_role_is_refused(project):
@@ -148,7 +213,7 @@ def test_north_against_rule_is_refused(project):
 
 def test_forbidden_license_is_refused(project):
     data = frames()
-    data["roads"].loc[0, "source_license"] = "условия использования Яндекс Карт"
+    data["poi_education"].loc[0, "source_license"] = "условия использования Яндекс Карт"
     gpkg.write(project / "geo" / "forbidden.gpkg", data, "синтетический проект", CRS.from_user_input(CRS_NAME),
                CRS_NAME, "sha256:" + "0" * 64)
     with pytest.raises(ValueError, match="запрещенные к печати"):
@@ -156,9 +221,9 @@ def test_forbidden_license_is_refused(project):
 
 
 def test_token_color_changes_map(project, tmp_path, monkeypatch):
-    """Приемка, п. 3: другой цвет кварталов в map.yaml верстки — стили их же командой — другая карта, код тот же."""
+    """Приемка, п. 3: другой цвет кварталов в map.yaml верстки — стили их же командой — другая подложка, код тот же."""
     design = tmp_path / "cm-design"
-    for folder in ("tokens", "design", "cm_deck"):
+    for folder in ("tokens", "design", "cm_deck", "input/fonts"):
         shutil.copytree(paths.design() / folder, design / folder)
     tokens_file = design / "tokens" / "map.yaml"
     color = tokens.load("map")["palette"]["block"]
@@ -169,21 +234,22 @@ def test_token_color_changes_map(project, tmp_path, monkeypatch):
                    env={**os.environ, "PYTHONPATH": str(design)})
     assert "216,228,240" in (design / "design" / "qgis" / "blocks.qml").read_text(encoding="utf-8")
 
-    before = Image.open(build.render(describe(project, "before"))[1]).convert("RGB")
+    build.render(describe(project, "before"))
     monkeypatch.setenv("CM_DESIGN", str(design))
-    after = Image.open(build.render(describe(project, "after"))[1]).convert("RGB")
-    assert before.size == after.size
-    assert before.tobytes() != after.tobytes()
-    assert (216, 228, 240) in {after.getpixel((x, y)) for x in range(0, after.width, 10) for y in range(0, after.height, 10)}
+    build.render(describe(project, "after"))
+    before = Image.open(project / "maps" / "before.png").convert("RGB")
+    after = Image.open(project / "maps" / "after.png").convert("RGB")
+    assert before.size == after.size and before.tobytes() != after.tobytes()
+    assert (216, 228, 240) in {c for _, c in after.getcolors(1 << 24)}
 
 
 def test_extent_fits_scale_and_inside_legend(project):
     spec = yaml.safe_load(describe(project, "extent").read_text(encoding="utf-8"))
     del spec["center"], spec["scale"]
     spec |= {"place": "landscape", "legend": "inside", "extent": [X - 600, Y - 600, X + 600, Y + 600]}
-    path = project / "extent.yaml"
-    path.write_text(yaml.safe_dump(spec, allow_unicode=True), encoding="utf-8")
-    written = build.render(path)
-    doc = provenance(written[0])
-    assert doc["scale"] == "1:6 400"  # 1200 м на 187,68 мм — 1:6394, вверх до двух значащих цифр
-    assert "legend_file" not in doc and len(written) == 2
+    (project / "extent.yaml").write_text(yaml.safe_dump(spec, allow_unicode=True), encoding="utf-8")
+    build.render(project / "extent.yaml")
+    assert side(project, "extent", ".provenance.json")["scale"] == "1:6 400"  # 1200 м на 187,68 мм — 1:6394, вверх
+    legend = layer(side(project, "extent", ".overlay.json"), "legend")
+    x, y = legend["legend_at"]
+    assert 0 < x < 251.88 and 0 < y < 187.68

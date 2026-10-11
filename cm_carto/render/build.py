@@ -16,19 +16,11 @@ import hashlib
 import json
 import os
 import shutil
-import sys
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-# Обрезку SVG по содержимому QGIS делает через QDomDocument; атрибуты элемента там в QHash, а затравка QHash в Qt 5
-# своя у каждого процесса: порядок атрибутов в SVG легенды менялся от запуска к запуску. Постоянная затравка — тот же
-# файл байт в байт. Действует, только если Qt еще не загружен в процесс: модуль импортируется раньше qgis.
-if "qgis.core" in sys.modules and os.environ.get("QT_HASH_SEED") != "0":
-    raise RuntimeError("cm_carto.render.build импортирован после qgis без QT_HASH_SEED=0: легенда SVG не будет "
-                       "воспроизводимой; импортировать модуль раньше qgis или задать QT_HASH_SEED=0 в окружении")
-os.environ["QT_HASH_SEED"] = "0"
 
 import jsonschema  # noqa: E402
 import shapely  # noqa: E402

@@ -1,7 +1,9 @@
 """Карты по описанию (schema/map.schema.json) через PyQGIS без окна в стилях и компоновках верстки.
 
-    cm-carto render <описание.yaml> [...]
+    cm-carto render <описание.yaml> [...] [--preview]
 
-spec.py — описание карты: проверка по схеме и по стандарту верстки при загрузке; build.py — рендер, легенда,
-provenance по контракту image, кеш _build/cache; print.yaml — источники, запрещенные к печати; cli.py — команда.
+Выход: подложка <out>.png и <out>.provenance.json (контракт image), слои данных <out>.overlay.json (контракт overlay),
+с --preview — <out>.preview.png для проверки глазами. spec.py — описание карты: проверка по схеме и по стандарту
+верстки при загрузке; build.py — рендер подложки, provenance, кеш _build/cache; overlay.py — слои данных в мм места
+и расстановка подписей; preview.py — превью; print.yaml — источники, запрещенные к печати; cli.py — команда.
 """
