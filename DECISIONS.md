@@ -167,3 +167,7 @@
 ## К-032. Интерфейсы и перенос (этап 5)
 
 11.10.2026. MCP-сервер `cm-carto-mcp` (FastMCP, stdio): инструменты — те же функции `run`, что у CLI (`doctor`, `ingest`, `fetch`, `render`, `isochrone`, `measure`, `buffer`, `count`), плюс `qgis_project` — `.qgz` для проверки глазами (слои только на чтение, стили верстки). QGIS один на процесс (`render.build.start`, им пользуется и `doctor`). Перенос проверен копией дерева без `.git` с `CM_DESIGN`/`CM_CONTRACTS` на копии: `doctor`, `ingest` и `render` дали те же файлы байт в байт. Части из внешних источников в git не хранятся (К-014, К-023): чистый клон собирает образец после `fetch` и слияния частей. На Mac — `pip install -e .`, шрифты в `~/Library/Fonts`; байт в байт с облаком не гарантируется (другие сборки QGIS и GDAL).
+
+## К-033. Листы К1 через cm-deck
+
+11.10.2026. Три листа (`examples/taganrog/sheets/`, выход — `sheets/out/`: pptx, pdf, png, `lint.json`) собирает `scripts/build_k1.sh` полным путем: части → геопакет → карты → временный переводчик overlay (К-029) → `cm-deck build` → `lint` → рендер. Линтер верстки по настоящим контрактам (image 1.1.0): 0 ошибок, 0 предупреждений, справка T19 (заголовок листа 3 — 57 знаков при цели 50). Лист зонирования — макет `image_page` (место `wide`): верстка сняла `image_full` (Д-048). Масштаб в provenance — «1:5000» по шаблону image 1.1.0, `overlay_file` у подложки. Подписи объектов нормализуются по `TEXT.md` (`cm_carto/render/labels.py`, списки — `rules/labels.yaml`).
