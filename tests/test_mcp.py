@@ -109,3 +109,23 @@ def test_qgis_project_has_layers_in_order_and_layout(project, monkeypatch):
     assert [layer.name() for layer in loaded.layerTreeRoot().layerOrder()] == ["Граница проекта планировки", "Кварталы"]
     assert [layout.name() for layout in loaded.layoutManager().layouts()] == ["view"]
     assert all(layer.readOnly() for layer in loaded.mapLayers().values())  # выпускной геопакет только на чтение (Э-005)
+
+
+def test_qgis_project_basemap_layers_are_links_with_features(project, monkeypatch):
+    """Подложка в .qgz — ссылка на геопакет, а не копия в памяти: после открытия объекты на месте, «ё» в подписи заменена."""
+    from qgis.core import QgsProject
+    from test_render_map import streets_gpkg
+
+    monkeypatch.setenv("CM_CARTO_PROJECT", str(project))
+    layers = {"road_main": {"layer": "roads", "where": "road_class = 'main'"}, "blocks": {}}
+    name = describe(project, "links")
+    spec = yaml.safe_load((project / name).read_text(encoding="utf-8"))
+    spec.update(layers=layers, data=str(streets_gpkg(project, "links")))
+    (project / name).write_text(yaml.safe_dump(spec, allow_unicode=True), encoding="utf-8")
+    path = tool("qgis_project", spec=name).content[0].text
+    loaded = QgsProject()
+    assert loaded.read(path)
+    roads = next(l for l in loaded.mapLayers().values() if l.name() != "Кварталы")
+    assert roads.providerType() == "ogr" and roads.featureCount() > 0
+    assert all(l.providerType() != "memory" and l.featureCount() > 0 for l in loaded.mapLayers().values())
+    assert roads.labeling().settings().isExpression

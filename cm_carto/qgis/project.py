@@ -9,12 +9,35 @@
 
 from pathlib import Path
 
-from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsProject, QgsReferencedRectangle, QgsRectangle
+from qgis.core import (Qgis, QgsCoordinateReferenceSystem, QgsProject, QgsReferencedRectangle, QgsRectangle,
+                       QgsVectorLayer)
 
 from cm_carto import paths, tokens
 from cm_carto.render import build, spec as spec_file
 
 EVERYWHERE = QgsRectangle(-1e9, -1e9, 1e9, 1e9)
+
+
+def linked(spec, role, copy: QgsVectorLayer) -> QgsVectorLayer:
+    """Подложка в проекте — ссылка на слой геопакета (а не копия в памяти, которая после открытия .qgz пуста): тот же
+    отбор объектов (fid копии равны fid геопакета), стиль и подпись. Подпись — выражение QGIS: замена «ё» на «е»;
+    остальные правила `labels.name` (кавычки, «№», пробелы) выражением не повторяются, на подложке они видны только
+    в рендере."""
+    options = QgsVectorLayer.LayerOptions(QgsProject.instance().transformContext())
+    options.forceReadOnly = True
+    layer = QgsVectorLayer(f"{spec.data}|layername={role.layer}", copy.name(), "ogr", options)
+    ids = ",".join(str(f.id()) for f in copy.getFeatures()) or "-1"
+    layer.setSubsetString(f"({role.where}) AND fid IN ({ids})" if role.where else f"fid IN ({ids})")
+    layer.setRenderer(copy.renderer().clone())
+    labeling = copy.labeling()
+    if labeling is not None:
+        settings = labeling.settings()
+        field = settings.fieldName
+        settings.fieldName = f"replace(replace(\"{field}\", 'ё', 'е'), 'Ё', 'Е')"
+        settings.isExpression = True
+        layer.setLabeling(type(labeling)(settings))
+        layer.setLabelsEnabled(copy.labelsEnabled())
+    return layer
 
 
 def build_project(path: Path, out: Path | None = None) -> Path:
@@ -30,6 +53,8 @@ def build_project(path: Path, out: Path | None = None) -> Path:
     layers = []
     for role in spec.roles:
         layer = build.vector(spec, std, role, EVERYWHERE).layer
+        if layer.providerType() == "memory":
+            layer = linked(spec, role, layer)
         layer.setReadOnly(True)  # в проекте слой не редактируется: правки в QGIS в выпуск не идут
         project.addMapLayer(layer, False)
         project.layerTreeRoot().addLayer(layer)

@@ -8,6 +8,7 @@
 import copy
 import json
 
+import pyogrio
 import yaml
 
 from cm_carto.analysis import data, isochrone, params as params_mod
@@ -20,9 +21,22 @@ def calc_path(project: Project):
     return project.part(ISOCHRONES).with_suffix(".calc.yaml")
 
 
-def layer_source(project: Project, layer: str, label: str, date: str) -> list[dict]:
-    return [{"doc_id": f"geopackage:{f.stem}:{layer}", "label": f"слой {layer}, {label}, выгрузка {date}",
-             "doc_status": "reference"} for f in data.locate(project, layer)]
+def layer_source(project: Project, layer: str, objects) -> list[dict]:
+    """Источники слоя по частям: в подпись части попадают подписи только тех объектов, что лежат в этой части.
+
+    `objects` — объекты слоя, попавшие в расчет (таблица со столбцами object_id, source_label, source_date).
+    """
+    wanted = {}
+    for _, o in objects.iterrows():
+        wanted.setdefault(o["object_id"], (o["source_label"], o["source_date"]))
+    out = []
+    for f in data.locate(project, layer):
+        ids = set(pyogrio.read_dataframe(f, layer=layer, columns=[], read_geometry=False).index.map(str)) \
+            if False else set(pyogrio.read_dataframe(f, layer=layer, read_geometry=False)["object_id"])
+        for label, date in sorted({wanted[i] for i in ids if i in wanted}):
+            out.append({"doc_id": f"geopackage:{f.stem}:{layer}", "label": f"слой {layer}, {label}, выгрузка {date}",
+                        "doc_status": "reference"})
+    return out
 
 
 def drafts(project: Project, object_id: str) -> list[dict]:
@@ -34,13 +48,12 @@ def drafts(project: Project, object_id: str) -> list[dict]:
         raise ValueError(f"{object_id}: изохрона в части не совпадает с расчетом по текущим данным и правилам, "
                          "нужен `cm-carto isochrone`")
     layer = iso["origin_id"].split(":")[0]
-    roads_label, roads_date = isochrone.single(roads, "source_label"), isochrone.single(roads, "source_date")
-    sources = (layer_source(project, "roads", roads_label, roads_date)
-               + layer_source(project, layer, origin["source_label"], origin["source_date"]))
+    isochrone.single(roads, "source_label"), isochrone.single(roads, "source_date")   # улицы из одного источника
+    sources = (layer_source(project, "roads", roads) + layer_source(project, layer, origin.to_frame().T))
     speed = f"{iso['speed_kmh']:g}".replace(".", ",")
     method = (f"{iso['kind']} от {iso['origin_id']} по графу улиц (слой roads), средняя скорость {speed} км/ч, "
               f"полоса {p['isochrone']['buffer_m']:g} м вокруг достижимых частей отрезков")
-    inputs = json.loads(iso["fact_ids"])
+    inputs = json.loads(iso["fact_ids"])  # допущение скорости ASM-… из правил, если задано
 
     def draft(what: str, value: float, unit: str, formula: str) -> dict:
         return {"kind": "calc", "subject": f"{object_id}, {what}", "value": float(round(value, 2)), "unit": unit,
