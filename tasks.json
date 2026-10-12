@@ -268,9 +268,9 @@
       "stage": "перенос",
       "title": "поля картографа анкеты — в разделе carto (замечание Романа, К-045)",
       "agent": "anketa-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "поля картографа в carto; поле на верхнем уровне — ошибка; test_project_anketa.py; сборка К1 без изменений"
     },
     {
       "id": "D8",

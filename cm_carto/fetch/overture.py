@@ -30,14 +30,14 @@ GEO_METADATA = {"version": "1.0.0", "primary_column": "geometry",
 
 
 def release_of(project: Project, release: str | None) -> str:
-    """Выпуск Overture: аргумент команды или `fetch.overture_release` в project.yaml."""
+    """Выпуск Overture: аргумент команды или `carto.fetch.overture_release` в project.yaml."""
     if release is not None:
         return release
-    return project.data["fetch"]["overture_release"]
+    return project.overture_release
 
 
 def cache_dir(project: Project, release: str) -> Path:
-    return project.root / project.data["inputs"] / "cache" / f"overture-{release}"
+    return project.inputs / "cache" / f"overture-{release}"
 
 
 def release_date(release: str) -> str:

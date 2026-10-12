@@ -93,7 +93,7 @@ def save(project: Project, new: list[dict]):
         items = pd.concat([old[~old["object_id"].isin(items["object_id"])], items], ignore_index=True)
     frame = gpd.GeoDataFrame(items, geometry="geometry", crs=project.crs)
     layers = sorted({i.split(":")[0] for i in frame["origin_id"]})
-    digest = gpkg.input_hash(params_mod.RULES, norms.registry_path(project), project.crs_name,
+    digest = gpkg.input_hash(params_mod.RULES, project.registry, project.crs_name,
                              *[f for layer in layers for f in data.locate(project, layer) if f != part],
                              sorted(frame["object_id"]))
     return gpkg.write(part, {"buffers": frame}, project.name, project.crs, project.crs_name, digest)

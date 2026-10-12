@@ -24,7 +24,7 @@ ELEMENT = {"node": "n", "way": "w", "relation": "r"}
 
 
 def cache_dir(project: Project) -> Path:
-    return project.root / project.data["inputs"] / "cache" / "osm"
+    return project.inputs / "cache" / "osm"
 
 
 def query(project: Project) -> str:

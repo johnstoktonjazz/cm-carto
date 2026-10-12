@@ -23,7 +23,7 @@ def project_values() -> set[str]:
     for path in ROOT.glob("examples/*/project.yaml"):
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
         values.add(data["name"])
-        values.update(str(v) for v in data["extent"] + data.get("extent_wgs84", []))
+        values.update(str(v) for v in data["carto"]["extent"] + data["carto"].get("extent_wgs84", []))
         values.update({data["crs"]["name"], data["crs"]["definition"]})
     return values
 

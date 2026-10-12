@@ -24,7 +24,7 @@
     },
     "data": {
       "type": "string",
-      "description": "геопакет проекта (контракт geopackage), путь от папки описания; по умолчанию <geo>/project.gpkg анкеты"
+      "description": "геопакет проекта (контракт geopackage), путь от папки описания; по умолчанию <carto.geo>/project.gpkg анкеты"
     },
     "crs": {
       "type": "string",

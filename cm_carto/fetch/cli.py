@@ -51,7 +51,7 @@ def add_parser(subparsers) -> None:
     p = subparsers.add_parser("fetch", help="внешние источники: Overture, OSM, реестры, сверка")
     p.add_argument("project", type=Path, help="project.yaml")
     p.add_argument("source", choices=list(SOURCES), help="; ".join(f"{k} — {v}" for k, v in SOURCES.items()))
-    p.add_argument("--release", help="выпуск Overture (иначе fetch.overture_release из project.yaml)")
+    p.add_argument("--release", help="выпуск Overture (иначе carto.fetch.overture_release из project.yaml)")
     p.add_argument("--file", type=Path, help="файл выгрузки (osm: .osm; реестры: .csv)")
     p.add_argument("--date", help="дата выгрузки файла, ГГГГ-ММ-ДД")
     p.add_argument("--base", choices=["overture", "osm"], default="overture", help="для reconcile: чьи слои сверять")

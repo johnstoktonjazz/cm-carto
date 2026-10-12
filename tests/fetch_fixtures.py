@@ -9,8 +9,9 @@ EXTENT = [423900, 5205600, 424800, 5206700]   # те же места в UTM 37N,
 
 
 def project_file(folder: Path, **extra) -> Path:
-    data = {"name": "синтетический проект", "crs": {"name": "EPSG:32637", "definition": "EPSG:32637"},
-            "extent": EXTENT, "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", "language": "ru", **extra}
+    carto = {"extent": EXTENT, "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", "language": "ru",
+             **extra}
+    data = {"name": "синтетический проект", "crs": {"name": "EPSG:32637", "definition": "EPSG:32637"}, "carto": carto}
     path = folder / "project.yaml"
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return path

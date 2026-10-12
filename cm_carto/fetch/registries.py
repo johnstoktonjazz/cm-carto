@@ -24,7 +24,7 @@ def rules() -> dict:
 
 
 def cache_dir(project: Project, registry: str) -> Path:
-    return project.root / project.data["inputs"] / "cache" / "registries" / registry
+    return project.inputs / "cache" / "registries" / registry
 
 
 def download(project: Project, registry: str, file: Path | None = None, date: str | None = None) -> Path:

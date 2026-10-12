@@ -1,13 +1,12 @@
 """Реестр норм на входе анализа: записи NORM формата контракта fact, расстояния буферов берутся отсюда.
 
-Реестр проекта — `<папка анкеты>/registry/norms.yaml` (ключ `registry` анкеты может указать другой путь): список
+Реестр проекта — `<папка анкеты>/registry/norms.yaml` (`carto.registry` анкеты может указать другой путь): список
 записей. Настоящий реестр ведет база; на полигоне — синтетический образец. Каждая запись проверяется по схеме fact;
 запись, которой нет, — ошибка, а не расстояние по умолчанию.
 """
 
 import json
 import math
-from pathlib import Path
 
 import jsonschema
 import yaml
@@ -16,12 +15,8 @@ from cm_carto import paths
 from cm_carto.project import Project
 
 
-def registry_path(project: Project) -> Path:
-    return project.root / project.data.get("registry", "registry/norms.yaml")
-
-
 def load(project: Project) -> dict[str, dict]:
-    path = registry_path(project)
+    path = project.registry
     if not path.exists():
         raise FileNotFoundError(f"нет реестра норм {path}")
     records = yaml.safe_load(path.read_text(encoding="utf-8"))

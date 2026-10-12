@@ -9,8 +9,8 @@
 | Поле | Что задает |
 |---|---|
 | `place` | место макета: `sheet`, `wide`, `landscape`, `landscape_wide`, `square_large`, `square`, `portrait`, `square_small`, `thumb`; размер PNG равен размеру места |
-| `project` | `project.yaml` проекта, путь от папки описания (система координат, папка геоданных) |
-| `data` | геопакет, если не `<geo>/project.gpkg` |
+| `project` | `project.yaml` проекта, путь от папки описания (система координат `crs`, папка геоданных `carto.geo`) |
+| `data` | геопакет, если не `<carto.geo>/project.gpkg` |
 | `center` + `scale` | центр (`[x, y]` или `object_id`) и знаменатель масштаба |
 | `extent` | охват вместо центра и масштаба: `[xmin, ymin, xmax, ymax]` или `object_id`; масштаб подбирается сам |
 | `legend` | ширина места легенды, мм (`59`, `91`, `123`) или `inside` — легенда внутри карты |

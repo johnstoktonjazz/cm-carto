@@ -24,8 +24,8 @@ LOCAL = {"эллипсоид Красовского без параметров 
 
 def anketa(folder, definition: str, **extra) -> project_mod.Project:
     """Анкета без extent_wgs84: охват только в системе проекта."""
-    data = {"name": "синтетический проект", "crs": {"name": "Местная СК", "definition": definition},
-            "extent": [486360, 5226270, 498490, 5236300], "geo": "geo", "inputs": "input", "language": "ru", **extra}
+    carto = {"extent": [486360, 5226270, 498490, 5236300], "geo": "geo", "inputs": "input", "language": "ru", **extra}
+    data = {"name": "синтетический проект", "crs": {"name": "Местная СК", "definition": definition}, "carto": carto}
     path = folder / "project.yaml"
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return project_mod.load(path)
@@ -34,14 +34,14 @@ def anketa(folder, definition: str, **extra) -> project_mod.Project:
 def test_anketa_without_extent_wgs84_loads(tmp_path):
     project = anketa(tmp_path, TMERC)
     assert project.extent == (486360, 5226270, 498490, 5236300)
-    assert "extent_wgs84" not in project.data
+    assert "extent_wgs84" not in project.carto
 
 
 def test_anketa_without_extent_is_error(tmp_path):
     path = tmp_path / "project.yaml"
-    path.write_text(yaml.safe_dump({"name": "п", "crs": {"name": "п", "definition": TMERC}, "geo": "geo",
-                                    "extent_wgs84": [38.0, 47.0, 38.1, 47.1]}), encoding="utf-8")
-    with pytest.raises(ValueError, match="нет поля extent"):
+    path.write_text(yaml.safe_dump({"name": "п", "crs": {"name": "п", "definition": TMERC},
+                                    "carto": {"geo": "geo", "extent_wgs84": [38.0, 47.0, 38.1, 47.1]}}), encoding="utf-8")
+    with pytest.raises(ValueError, match="нет поля carto.extent"):
         project_mod.load(path)
 
 
@@ -104,8 +104,8 @@ def test_taganrog_cache_still_matches_example():
 @pytest.mark.parametrize("definition", LOCAL.values(), ids=LOCAL)
 def test_ingest_dxf_in_local_crs(tmp_path, definition):
     example = project_in(tmp_path)
-    data = {**example.data, "crs": {"name": "Местная СК", "definition": definition}}
-    data.pop("extent_wgs84")
+    carto = {k: v for k, v in example.carto.items() if k != "extent_wgs84"}
+    data = {**example.data, "crs": {"name": "Местная СК", "definition": definition}, "carto": carto}
     project = dataclasses.replace(example, data=data)
     out, _ = ingest(project, SAMPLES / "dxf" / "ppt-sample.dxf")
     frames = gpkg.read(out)
@@ -125,7 +125,8 @@ def test_render_in_local_crs(tmp_path, cache, definition):
     folder = tmp_path / "project"
     folder.mkdir()
     data = {"name": "синтетический проект", "crs": {"name": "Местная СК", "definition": definition},
-            "extent": [render_map.X - 5000, render_map.Y - 5000, render_map.X + 5000, render_map.Y + 5000], "geo": "geo"}
+            "carto": {"extent": [render_map.X - 5000, render_map.Y - 5000, render_map.X + 5000, render_map.Y + 5000],
+                      "geo": "geo"}}
     (folder / "project.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     frames = {name: frame.set_crs(crs, allow_override=True) for name, frame in render_map.frames().items()}
     gpkg.write(folder / "geo" / "project.gpkg", frames, "синтетический проект", crs, "Местная СК", "sha256:" + "0" * 64)

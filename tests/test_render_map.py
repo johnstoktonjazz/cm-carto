@@ -73,7 +73,7 @@ def project(tmp_path_factory):
     root = tmp_path_factory.mktemp("project")
     (root / "project.yaml").write_text(yaml.safe_dump(
         {"name": "синтетический проект", "crs": {"name": CRS_NAME, "definition": CRS_NAME},
-         "extent": [X - 5000, Y - 5000, X + 5000, Y + 5000], "geo": "geo"}, allow_unicode=True), encoding="utf-8")
+         "carto": {"extent": [X - 5000, Y - 5000, X + 5000, Y + 5000], "geo": "geo"}}, allow_unicode=True), encoding="utf-8")
     gpkg.write(root / "geo" / "project.gpkg", frames(), "синтетический проект", CRS.from_user_input(CRS_NAME),
                CRS_NAME, "sha256:" + "0" * 64)
     return root

@@ -35,7 +35,7 @@ def project_with_rules(tmp_path, files: dict[str, dict]):
     for name, data in files.items():
         (folder / f"{name}.yaml").write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
     project = project_in(tmp_path)
-    return dataclasses.replace(project, data={**project.data, "rules": "rules"}), folder
+    return dataclasses.replace(project, data={**project.data, "carto": {**project.carto, "rules": "rules"}}), folder
 
 
 def custom_dxf(tmp_path, project, name="plan.dxf", passport="ppt", typical=True):
