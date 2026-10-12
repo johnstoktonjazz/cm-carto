@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "cm-carto/rules/1",
   "title": "Правила раскладки источника в слои геопакета",
-  "description": "Один файл rules/<имя>.yaml: что из чертежа DXF, выписки ЕГРН или векторного файла третьих лиц в какой слой контракта geopackage. Слои и атрибуты слоя дополнительно сверяются с контрактом при загрузке.",
+  "description": "Один файл rules/<имя>.yaml: что из чертежа DXF, выписки ЕГРН или векторного файла третьих лиц в какой слой контракта geopackage. Слои и атрибуты слоя дополнительно сверяются с контрактом при загрузке. Схема проверяет итог: файл проекта с extends сначала складывается с правилами модуля.",
   "oneOf": [
     {"$ref": "#/$defs/dxf"},
     {"$ref": "#/$defs/egrn"},
@@ -10,6 +10,7 @@
   ],
   "$defs": {
     "status": {"enum": ["official", "cadastral", "digitized", "concept", "reference"]},
+    "extends": {"type": "string", "pattern": "^[a-z0-9_-]+$", "description": "только в файле проекта: имя правил модуля, которые файл дополняет (rules/<имя>.yaml)"},
     "patterns": {
       "type": "array", "minItems": 1, "uniqueItems": true,
       "items": {"type": "string", "minLength": 1},
@@ -29,6 +30,7 @@
       "required": ["type", "status", "tolerance_m", "arc_tolerance_m", "ignore", "layers"],
       "properties": {
         "type": {"const": "dxf"},
+        "extends": {"$ref": "#/$defs/extends"},
         "status": {"$ref": "#/$defs/status"},
         "tolerance_m": {"type": "number", "exclusiveMinimum": 0, "description": "допуск замыкания разрыва контура, м"},
         "arc_tolerance_m": {"type": "number", "exclusiveMinimum": 0, "description": "допуск аппроксимации дуг и сплайнов, м"},
@@ -64,6 +66,7 @@
       "required": ["type", "status", "source_label", "area_tolerance", "parcels", "boundary_types", "zouit_types", "zouit_other_kind", "pzz"],
       "properties": {
         "type": {"const": "egrn"},
+        "extends": {"$ref": "#/$defs/extends"},
         "status": {"$ref": "#/$defs/status"},
         "source_label": {"type": "string", "description": "подпись источника; {registration_number}, {organ} — реквизиты выписки"},
         "area_tolerance": {"type": "number", "exclusiveMinimum": 0, "description": "допустимое расхождение площади выписки и контура, доля"},
@@ -111,6 +114,7 @@
       "required": ["type", "status", "layers"],
       "properties": {
         "type": {"const": "vector"},
+        "extends": {"$ref": "#/$defs/extends"},
         "status": {"$ref": "#/$defs/status"},
         "layers": {
           "type": "array", "minItems": 1,

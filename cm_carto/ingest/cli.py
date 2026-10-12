@@ -18,17 +18,19 @@ def ingest_file(project: project_mod.Project, file: Path) -> tuple[Path, report_
     suffix = file.suffix.lower()
     report = report_mod.Report(f"Отчет импорта: {file.name}", [f"Проект: {project.name}", f"Система координат: {project.crs_name}"])
     if suffix == ".xml":
-        rules = rules_mod.load("egrn")
-        frames = egrn.ingest(file, rules, project, report)
-        inputs = [file, rules_mod.path("egrn")]
+        applied = rules_mod.applied("egrn", project)
+        report.header += applied.header(project)
+        frames = egrn.ingest(file, applied.rules, project, report)
+        inputs = [file, *applied.files]
     else:
         source = common.load_source(file)
-        rules = rules_mod.load(source.rules)
+        applied = rules_mod.applied(source.rules, project)
+        rules = applied.rules
         if rules["type"] != RULES_TYPE[suffix]:
             raise ValueError(f"{file.name}: правила {source.rules} типа {rules['type']}, для {suffix} нужны {RULES_TYPE[suffix]}")
-        report.header += [f"Источник: {source.label}, {source.date}", f"Правила: rules/{source.rules}.yaml"]
+        report.header += [f"Источник: {source.label}, {source.date}", *applied.header(project)]
         frames = (dxf if suffix == ".dxf" else vector).ingest(file, source, rules, project, report)
-        inputs = [file, common.source_path(file), rules_mod.path(source.rules)]
+        inputs = [file, common.source_path(file), *applied.files]
     return common.write_part(project, file.stem, frames, report, inputs), report
 
 

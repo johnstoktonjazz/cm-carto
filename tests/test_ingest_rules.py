@@ -19,9 +19,9 @@ def custom_rules(tmp_path, monkeypatch):
         (tmp_path / f"{name}.yaml").write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     original = rules.path
     monkeypatch.setattr(rules, "path", lambda n: tmp_path / f"{n}.yaml" if (tmp_path / f"{n}.yaml").exists() else original(n))
-    rules.load.cache_clear()
+    rules._applied.cache_clear()
     yield make
-    rules.load.cache_clear()
+    rules._applied.cache_clear()
 
 
 @pytest.mark.parametrize("name", ["ppt", "egrn", "vector"])
