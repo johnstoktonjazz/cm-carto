@@ -279,7 +279,7 @@
       "agent": "оркестратор",
       "status": "done",
       "after": [],
-      "note": "код под geopackage 1.2.0 и fact 1.1.0 (К-046); перемотка main cm-contracts на 15b5e76 — за Романом"
+      "note": "1239d7a; перемотка main cm-contracts на 15b5e76 — за Романом (правило разрешений)"
     }
   ]
 }
