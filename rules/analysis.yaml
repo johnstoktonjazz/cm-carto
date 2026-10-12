@@ -10,10 +10,12 @@ modes:
     speed_kmh: {express: null, main: 4.8, district: 4.8, local: 4.8, pedestrian: 4.8, service: 4.8, path: 4.8}
     assumption_id: ASM-9001        # временный, номер даст база (К-028); скорость пешком — допущение ASM
     kind: "изохрона {minutes} мин пешком"
+    directed: false                # пешеходу односторонность улиц не важна
   drive:
     speed_kmh: {express: 80, main: 50, district: 40, local: 30, pedestrian: null, service: 20, path: null}
     assumption_id: ASM-9002        # временный, номер даст база (К-028); скорости автомобиля — допущение ASM
     kind: "изохрона {minutes} мин на автомобиле"
+    directed: true                 # граф ориентированный: одностороннее ребро (roads.oneway) — одна дуга
 origin:
   point_snap_max_m: 100          # точка дальше этого от ближайшего отрезка графа — ошибка
   contour_boundary_tolerance_m: 25   # старт от контура: узлы графа не дальше этого от границы контура
@@ -25,37 +27,47 @@ labels:
   # источника линтер верстки (C01) считает показателем без идентификатора.
   source: "расчет картографа по графу {roads_label}"
 
-# Буферы (cm-carto buffer). Расстояний здесь нет: правило ссылается на запись NORM реестра проекта
+# Буферы (cm-carto buffer). Расстояний здесь нет: правило ссылается на запись NRM реестра проекта
 # (`registry/norms.yaml` от папки анкеты или `carto.registry`), расстояние берется из ее `value`. `match` подбирает объекты слоя
 # по значению столбца (одно значение или список); без `match` объекты называют явно: `--from <object_id>`.
-# `norm_by_length` — норма по длине объекта: первая полоса, где длина (км) меньше `below_km`; последняя — без границы.
+# Норма выбирается одним из трех способов:
+#   norm            - одна запись реестра;
+#   norm_by_attr    - по значению атрибута-категории объекта (`attr`; `norms` - значение -> запись). Атрибут вводит автор
+#                     проекта (geopackage 1.2.0); `title` - как назвать его в сообщении об ошибке. `if_missing` - если у объекта
+#                     атрибута нет: взять значение по другому атрибуту (`attr`) через таблицу допущения ASM (`assumption_id`;
+#                     таблица - в `value` записи допущения рядом с реестром норм, файл `assumptions.yaml`); номер допущения
+#                     попадает в fact_ids буфера. Без `if_missing` объект без атрибута - ошибка. В `kind` {value} - значение атрибута;
+#   norm_by_length  - по длине объекта из атрибута `attr` (км): первая полоса, где длина меньше `below_km`; последняя - без границы.
+# Лицензия буфера - лицензия источника, если она у источника есть (внешние данные); у данных проекта (КПТ, ППТ) ее нет.
 buffers:
   quad_segs: 8                   # сегментов на четверть окружности в закруглениях буфера
   label: "буфер {distance} м по {norm}, от {origin}"
-  own_data_license: "данные заказчика, внешней лицензии нет"   # у источника без source_license (КПТ, ППТ)
   rules:
     szz-boiler:
       layer: poi_other
       match: {kind: котельная}
       kind: санитарно-защитная зона котельной
       buffer_type: sanitary
-      norm: NORM-90001
-    szz-industry-v:
+      norm: NRM-90001
+    szz-industry:
       layer: parcels
-      kind: санитарно-защитная зона предприятия класса V
+      kind: санитарно-защитная зона предприятия класса {value}
       buffer_type: sanitary
-      norm: NORM-90002
-    szz-industry-iv:
-      layer: parcels
-      kind: санитарно-защитная зона предприятия класса IV
+      norm_by_attr: &hazard
+        attr: hazard_class
+        title: класс опасности
+        norms: {IV: NRM-90003, V: NRM-90002}
+    szz-industry-poi:
+      layer: poi_other
+      kind: санитарно-защитная зона предприятия класса {value}
       buffer_type: sanitary
-      norm: NORM-90003
+      norm_by_attr: *hazard
     szz-fuel:
       layer: poi_other
       match: {kind: автозаправка}
       kind: санитарно-защитная зона автозаправки
       buffer_type: sanitary
-      norm: NORM-90004
+      norm: NRM-90004
     water-protection-river:
       layer: water
       match: {water_class: river}
@@ -63,48 +75,42 @@ buffers:
       buffer_type: water_protection
       exclude_source: true
       norm_by_length:
-        - {norm: NORM-90005, below_km: 10}
-        - {norm: NORM-90006, below_km: 50}
-        - {norm: NORM-90007}
+        attr: length_km
+        title: длина водотока
+        bands:
+          - {norm: NRM-90005, below_km: 10}
+          - {norm: NRM-90006, below_km: 50}
+          - {norm: NRM-90007}
     water-protection-lake:
       layer: water
       match: {water_class: [lake, reservoir]}
       kind: водоохранная зона озера, водохранилища
       buffer_type: water_protection
       exclude_source: true
-      norm: NORM-90013
+      norm: NRM-90013
     water-protection-sea:
       layer: water
       match: {water_class: sea}
       kind: водоохранная зона моря
       buffer_type: water_protection
       exclude_source: true
-      norm: NORM-90012
+      norm: NRM-90012
     coastal-strip:
       layer: water
       match: {water_class: [river, lake, reservoir, sea]}
       kind: береговая полоса
       buffer_type: coastal_strip
       exclude_source: true
-      norm: NORM-90008
-    roadside-express:
+      norm: NRM-90008
+    roadside:
       layer: roads
-      match: {road_class: express}
-      kind: придорожная полоса скоростной дороги
+      kind: придорожная полоса дороги категории {value}
       buffer_type: roadside
-      norm: NORM-90009
-    roadside-main:
-      layer: roads
-      match: {road_class: main}
-      kind: придорожная полоса магистральной улицы
-      buffer_type: roadside
-      norm: NORM-90010
-    roadside-district:
-      layer: roads
-      match: {road_class: district}
-      kind: придорожная полоса районной улицы
-      buffer_type: roadside
-      norm: NORM-90011
+      norm_by_attr:
+        attr: road_category
+        title: категория дороги
+        norms: {IА: NRM-90009, IБ: NRM-90009, IВ: NRM-90009, II: NRM-90010, III: NRM-90011}
+        if_missing: {attr: road_class, assumption_id: ASM-9003}   # временный, номер даст база; соответствие класса улицы категории - допущение ASM
 
 # Подсчеты в зоне (cm-carto count): сколько идентификаторов объектов перечислять в формуле заготовки CALC.
 count:

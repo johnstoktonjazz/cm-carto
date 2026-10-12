@@ -95,7 +95,12 @@ def download(project: Project, release: str) -> Path:
 
 def read(folder: Path, source: str, project: Project) -> gpd.GeoDataFrame:
     """Сырая выборка из кеша в системе координат проекта (без обрезки по охвату); столбец class называется class_."""
-    frame = pq.read_table(folder / (source.replace("/", "-") + ".parquet")).to_pandas()
+    path = folder / (source.replace("/", "-") + ".parquet")
+    frame = pq.read_table(path).to_pandas()
+    missing = [c for c in rules()["overture"]["datasets"][source]["columns"] if c not in frame.columns]
+    if missing:
+        raise ValueError(f"{path}: в кеше нет столбцов {missing}: правила rules/fetch.yaml изменились после выгрузки; "
+                         f"удалить кеш {folder} и выгрузить заново")
     geometry = gpd.GeoSeries.from_wkb(frame.pop("geometry"), crs="EPSG:4326").to_crs(project.crs)
     return gpd.GeoDataFrame(frame.rename(columns={"class": "class_"}), geometry=geometry)
 
@@ -119,12 +124,29 @@ def covers(between, at: float) -> bool:
     return between is None or between[0] <= at <= between[1]
 
 
-def pieces(segment, flags, sources):
-    """Участки сегмента по границам источников (`between`) и флагов: (источник, под землей, линия).
-    Заброшенные и строящиеся участки пропускаются."""
+def oneway_rules(restrictions) -> list[dict]:
+    """Ограничения доступа сегмента, делающие его односторонним: `denied` с условием из одного `heading`.
+    Запрет с видом транспорта, временем и другими условиями односторонность не задает. У каждого — участок сегмента
+    (`between`, null — весь) и движение относительно линии сегмента (along или against).
+
+    Направление в Overture: heading отсчитывается от направления линии сегмента (forward — по линии, backward —
+    против нее). Запрет движения backward — улица односторонняя по линии, запрет forward — против линии."""
+    out = []
+    for item in restrictions if restrictions is not None else []:
+        when = item["when"]
+        if (item["access_type"] == "denied" and when is not None and when["heading"] is not None
+                and all(v is None for k, v in when.items() if k != "heading")):
+            out.append({"between": item["between"], "direction": rules()["overture"]["oneway_denied_heading"][when["heading"]]})
+    return out
+
+
+def pieces(segment, flags, sources, restrictions=()):
+    """Участки сегмента по границам источников (`between`), флагов и односторонних ограничений:
+    (источник, под землей, на мосту, движение, линия). Движение — along или against для односторонней улицы, иначе
+    None; линия односторонней улицы развернута по направлению движения. Заброшенные и строящиеся участки пропускаются."""
     flags = flags if flags is not None else []
     cuts = {0.0, 1.0}
-    for item in [*sources, *flags]:
+    for item in [*sources, *flags, *restrictions]:
         if item["between"] is not None:
             cuts.update(float(x) for x in item["between"])
     cuts = sorted(cuts)
@@ -136,38 +158,64 @@ def pieces(segment, flags, sources):
         owner = [s for s in sources if covers(s["between"], middle)]
         if not owner:
             raise ValueError(f"сегмент {segment.id}: участок {start:.4f}-{end:.4f} без источника")
+        directions = {r["direction"] for r in restrictions if covers(r["between"], middle)}
+        if len(directions) > 1:
+            raise ValueError(f"сегмент {segment.id}: участок {start:.4f}-{end:.4f} закрыт для движения в обе стороны")
+        direction = next(iter(directions), None)
         line = substring(segment.geometry, start, end, normalized=True)
         if line.geom_type == "LineString" and line.length > 0.01:
-            yield owner[0], bool(values & set(rules()["flags"]["tunnel"])), line
+            yield (owner[0], bool(values & set(rules()["flags"]["tunnel"])), bool(values & set(rules()["flags"]["bridge"])),
+                   direction, line.reverse() if direction == "against" else line)
+
+
+def suffix(variants: list[tuple], names: list[str]) -> list[str]:
+    """Окончания ключей у вариантов одного элемента OSM по признакам вариантов (кортежи bool, имена — names):
+    у варианта окончание -имя для каждого признака, который у него истинен и у вариантов различается. Если признаки
+    у всех вариантов одинаковы (в том числе вариант один), ключ не меняется."""
+    varying = [len({v[i] for v in variants}) > 1 for i in range(len(names))]
+    return ["".join(f"-{n}" for n, vary, on in zip(names, varying, v) if vary and on) for v in variants]
 
 
 def lines(segments: gpd.GeoDataFrame, subtype: str, layer: str, attr: str, release: str, area, date: str,
           names: common.Names):
-    """Слои roads и rail: сегменты Overture режутся по исходным элементам OSM и тоннелям, участки одного элемента
-    собираются обратно в одну запись `слой:osm-w123` (тоннельный участок — с суффиксом -t)."""
+    """Слои roads и rail: сегменты Overture режутся по исходным элементам OSM, тоннелям (дороги и пути), мостам и
+    односторонности (дороги) и собираются обратно в одну запись `слой:osm-w123`. Участок под землей — с окончанием -t.
+    Если у одного элемента OSM мост или односторонность различаются по участкам, участки с признаком получают
+    окончания -b и -o. Линия односторонней улицы идет по направлению движения: такие линии собираются только
+    в согласованном направлении (line_merge directed)."""
     rule = rules()[layer]
-    flags_column = "road_flags" if layer == "roads" else "rail_flags"
+    roads = layer == "roads"
+    flags_column = "road_flags" if roads else "rail_flags"
     groups = {}
     for segment in segments[segments["subtype"] == subtype].itertuples():
         if segment.class_ not in rule["classes"]:
             raise ValueError(f"{layer}: класс Overture {segment.class_} не описан в rules/fetch.yaml")
         value = rule["classes"][segment.class_]
-        for source, tunnel, line in pieces(segment, getattr(segment, flags_column), segment.sources):
+        restrictions = oneway_rules(segment.access_restrictions) if roads else []
+        for source, tunnel, bridge, direction, line in pieces(segment, getattr(segment, flags_column), segment.sources,
+                                                              restrictions):
             key = source_key(source, segment.id)
-            group = groups.setdefault((key, tunnel), {"value": value, "lines": [], "name": names.overture(segment.names),
-                                                       "license": common.license_name(source["license"]),
-                                                       "label": origin([source], segment.id, release)[1]})
+            variant = (key, tunnel, bridge and roads, direction is not None)
+            group = groups.setdefault(variant, {"value": value, "lines": [], "name": names.overture(segment.names),
+                                                "license": common.license_name(source["license"]),
+                                                "label": origin([source], segment.id, release)[1]})
             if group["value"] != value:
                 raise ValueError(f"{layer}: у {key} два класса — {group['value']} и {value}")
             group["lines"].append(line)
+    by_key = {}
+    for (key, tunnel, bridge, oneway), group in groups.items():
+        by_key.setdefault((key, tunnel), []).append(((bridge, oneway), group))
     rows = []
-    for (key, tunnel), group in groups.items():
-        geom = common.lines_of(shapely.intersection(shapely.line_merge(shapely.MultiLineString(group["lines"])), area))
-        if geom is None:
-            continue
-        rows.append({"key": key + ("-t" if tunnel else ""), "name": group["name"], "kind": None,
-                     "label": group["label"], "date": date, "license": group["license"], "geometry": geom,
-                     attr: group["value"], "tunnel": tunnel})
+    for (key, tunnel), items in by_key.items():
+        for ((bridge, oneway), group), ending in zip(items, suffix([flags for flags, _ in items], ["b", "o"])):
+            merged = shapely.line_merge(shapely.MultiLineString(group["lines"]), directed=oneway)
+            geom = common.lines_of(shapely.intersection(merged, area))
+            if geom is None:
+                continue
+            row = {"key": key + ("-t" if tunnel else "") + ending, "name": group["name"], "kind": None,
+                   "label": group["label"], "date": date, "license": group["license"], "geometry": geom,
+                   attr: group["value"], "tunnel": tunnel}
+            rows.append((row | {"bridge": bridge, "oneway": oneway}) if roads else row)
     if layer == "rail":
         parallel_sidings(rows, attr)
     for row in rows:

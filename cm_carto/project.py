@@ -17,6 +17,7 @@
       language: ru                            # язык названий объектов из внешних источников
       rules: rules                            # необязательно: папка правил проекта от папки анкеты (ingest)
       registry: registry/norms.yaml           # необязательно: реестр норм (буферы) от папки анкеты
+      attributes: attributes.yaml             # необязательно: атрибуты, которые вводит автор (object_id → значения)
       fetch:
         overture_release: 2026-09-23.0        # выпуск Overture Maps для fetch overture
 
@@ -39,7 +40,7 @@ from pyproj import CRS
 from pyproj.transformer import TransformerGroup
 
 
-CARTO_FIELDS = ("extent", "extent_wgs84", "geo", "inputs", "language", "rules", "registry", "fetch")
+CARTO_FIELDS = ("extent", "extent_wgs84", "geo", "inputs", "language", "rules", "registry", "attributes", "fetch")
 
 
 @dataclass(frozen=True)
@@ -121,8 +122,13 @@ class Project:
 
     @property
     def registry(self) -> Path:
-        """Реестр норм проекта (записи NORM для буферов)."""
+        """Реестр норм проекта (записи NRM для буферов)."""
         return self.root / self.carto.get("registry", "registry/norms.yaml")
+
+    @property
+    def attributes(self) -> Path | None:
+        """Атрибуты автора проекта (geopackage 1.2.0: класс опасности, категория дороги, длина водотока)."""
+        return self.root / self.carto["attributes"] if "attributes" in self.carto else None
 
     @property
     def gpkg(self) -> Path:

@@ -250,9 +250,9 @@
       "stage": "перенос",
       "title": "NRM- вместо NORM-: overlay 1.2.0 в main, geopackage 1.2.0, правила анализа; синтетика — после geopackage 1.2.0 и fact 1.1.0",
       "agent": "оркестратор",
-      "status": "blocked",
+      "status": "done",
       "after": [],
-      "note": "overlay 1.2.0 в main (f049f48), geopackage 1.2.0 в ветке, правила анализа и описание карты принимают NRM-; синтетика — после geopackage 1.2.0 и fact 1.1.0"
+      "note": "синтетика NRM-, правила только NRM- (К-046)"
     },
     {
       "id": "D6",
@@ -277,9 +277,9 @@
       "stage": "перенос",
       "title": "после базы: слить geopackage 1.2.0 и image 1.3.0, подмодуль, код под 1.2.0, СХ в правилах КПТ, синтетика NRM-",
       "agent": "оркестратор",
-      "status": "blocked",
+      "status": "done",
       "after": [],
-      "note": "ждет подтверждения базы и fact 1.1.0; image 1.3.0 готов в ветке (b018301)"
+      "note": "код под geopackage 1.2.0 и fact 1.1.0 (К-046); перемотка main cm-contracts на 15b5e76 — за Романом"
     }
   ]
 }

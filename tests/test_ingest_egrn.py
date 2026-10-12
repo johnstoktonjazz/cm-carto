@@ -147,3 +147,17 @@ def test_sample_kpt(tmp_path):
         assert set(frame.status) == {"cadastral"} and frame.source_label.str.contains("синтетический образец").all()
     assert report.unrecognized == ["участок 00:00:0000000:17: границы в выписке не установлены"]
     assert report.confirm == [] and report.fixed == []
+
+
+
+def test_agricultural_zone_by_index_and_name(tmp_path):
+    """Категория СХ (geopackage 1.2.0): по буквам индекса и по названию без индекса."""
+    def build(p, e, n):
+        zones = (zone("00:00-7.4", "Территориальная зона", "Зона сельскохозяйственного использования", ring(e, n),
+                      index="СХ-1")
+                 + zone("00:00-7.5", "Территориальная зона", "Зона сельскохозяйственного производства", ring(e + 200, n)))
+        return kpt(p, zones=zones)
+    frames, _, _ = run(tmp_path, build)
+    pzz = frames["zones_pzz"].set_index("object_id")
+    assert pzz.loc["zones_pzz:00-00-7.4", "zone"] == "СХ" and pzz.loc["zones_pzz:00-00-7.4", "code"] == "СХ-1"
+    assert pzz.loc["zones_pzz:00-00-7.5", "zone"] == "СХ"

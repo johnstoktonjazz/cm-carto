@@ -4,7 +4,8 @@
 overture:
   # источник -> столбцы сырой выборки
   datasets:
-    transportation/segment: {columns: [id, names, subtype, class, subclass, road_flags, rail_flags, sources], license: ODbL 1.0}
+    transportation/segment: {columns: [id, names, subtype, class, subclass, road_flags, rail_flags, access_restrictions, sources],
+                             license: ODbL 1.0}
     base/water: {columns: [id, names, subtype, class, is_salt, sources], license: ODbL 1.0}
     base/land: {columns: [id, names, subtype, class, sources], license: ODbL 1.0}
     base/land_use: {columns: [id, names, subtype, class, sources], license: ODbL 1.0}
@@ -14,6 +15,11 @@ overture:
                    license: CDLA-Permissive-2.0}   # условия Overture; источники внутри — Meta, Foursquare и др.
   # объекты Overture Places с уверенностью ниже порога и закрытые не берутся
   places_min_confidence: 0.5
+  # Односторонность сегмента: ограничение доступа access_restrictions с access_type = denied и условием из одного
+  # heading (без вида транспорта, времени и прочего). heading в Overture отсчитывается от направления линии сегмента:
+  # forward — по линии, backward — против. Запрет движения backward оставляет движение по линии (along), запрет
+  # forward — против линии (against); в геопакет линия односторонней улицы пишется по направлению движения.
+  oneway_denied_heading: {backward: along, forward: against}
 
 labels:
   osm_overture: "OpenStreetMap через Overture Maps {release}"
@@ -28,6 +34,7 @@ licenses:            # как пишет источник -> как пишем �
 flags:
   skip: [is_abandoned, is_disused, is_under_construction]   # участки не берутся
   tunnel: [is_tunnel, is_covered]                            # участки под землей и под перекрытием
+  bridge: [is_bridge]                                        # участки на мосту и путепроводе (дороги)
 
 roads:
   # класс OSM (highway) -> road_class контракта; класс вне списка — ошибка
@@ -237,6 +244,12 @@ osm:
   # теги, по которым запрашиваются элементы
   tag_keys: [highway, railway, public_transport, building, leisure, landuse, natural, water, waterway, amenity,
              tourism, shop]
+  # Односторонние улицы: значение тега oneway -> движение относительно направления линии OSM (along — по линии,
+  # against — против нее; в геопакет такая линия пишется развернутой). Любое другое значение (no, reversible, ...) —
+  # двустороннее. Без тега oneway односторонними считаются улицы, которые OSM определяет односторонними сама (implied).
+  oneway:
+    values: {"yes": along, "1": along, "true": along, "-1": against, "reverse": against}
+    implied: [junction=roundabout, highway=motorway, highway=motorway_link]
   stops:
     highway=bus_stop: bus
     amenity=bus_station: bus

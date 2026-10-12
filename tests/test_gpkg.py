@@ -55,7 +55,7 @@ def test_merge_parts(tmp_path):
     doc, frames = example_frames()
     a = write(tmp_path / "a.gpkg", {k: v for k, v in frames.items() if k in ("blocks", "roads")}, doc)
     b = write(tmp_path / "b.gpkg", {k: v for k, v in frames.items() if k not in ("blocks", "roads")}, doc)
-    out = gpkg.merge([a, b], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"])
+    out = gpkg.merge([a, b], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"], None)
     assert gpkg.check(out) == []
     assert set(gpkg.read(out)) == set(frames)
 
@@ -98,4 +98,33 @@ def test_merge_refuses_part_changed_while_reading(tmp_path, monkeypatch):
 
     monkeypatch.setattr(gpkg, "read", read_and_touch)
     with pytest.raises(RuntimeError, match="менялись во время слияния"):
-        gpkg.merge([a, b], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"])
+        gpkg.merge([a, b], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"], None)
+
+
+def test_merge_applies_author_attributes(tmp_path):
+    """Атрибуты автора (geopackage 1.2.0) из файла carto.attributes накладываются на объекты частей и входят в хэш."""
+    doc, frames = example_frames()
+    a = write(tmp_path / "a.gpkg", frames, doc)
+    given = tmp_path / "attributes.yaml"
+    given.write_text("roads:osm-w100200300: {road_category: II}\nparcels:00-00-000001-12: {hazard_class: IV}\n",
+                     encoding="utf-8")
+    crs = CRS.from_user_input(doc["crs"])
+    out = gpkg.merge([a], tmp_path / "p.gpkg", doc["project"], crs, doc["crs"], given)
+    merged = gpkg.read(out)
+    assert merged["roads"].set_index("object_id").loc["roads:osm-w100200300", "road_category"] == "II"
+    assert merged["parcels"].set_index("object_id").loc["parcels:00-00-000001-12", "hazard_class"] == "IV"
+    assert gpkg.meta(out)["input_hash"] == gpkg.merge_hash([a], given) != gpkg.merge_hash([a], None)
+
+
+@pytest.mark.parametrize("text, message", [
+    ("roads:osm-w100200300: {road_class: main}\n", "не атрибут автора"),        # атрибут источника, не автора
+    ("parcels:00-00-000001-12: {hazard_class: VI}\n", "hazard_class = 'VI'"),  # не из перечня контракта
+    ("water:osm-w1: {length_km: 8}\n", "объектов нет в частях"),
+])
+def test_author_attributes_are_checked(tmp_path, text, message):
+    doc, frames = example_frames()
+    a = write(tmp_path / "a.gpkg", frames, doc)
+    given = tmp_path / "attributes.yaml"
+    given.write_text(text, encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        gpkg.merge([a], tmp_path / "p.gpkg", doc["project"], CRS.from_user_input(doc["crs"]), doc["crs"], given)

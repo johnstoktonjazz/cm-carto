@@ -96,7 +96,6 @@
       "required": [
         "quad_segs",
         "label",
-        "own_data_license",
         "rules"
       ],
       "additionalProperties": false,
@@ -107,10 +106,6 @@
         },
         "label": {
           "type": "string"
-        },
-        "own_data_license": {
-          "type": "string",
-          "minLength": 1
         },
         "rules": {
           "type": "object",
@@ -144,7 +139,8 @@
       "required": [
         "speed_kmh",
         "assumption_id",
-        "kind"
+        "kind",
+        "directed"
       ],
       "additionalProperties": false,
       "properties": {
@@ -179,6 +175,9 @@
         },
         "kind": {
           "type": "string"
+        },
+        "directed": {
+          "type": "boolean"
         }
       }
     },
@@ -194,6 +193,11 @@
         {
           "required": [
             "norm"
+          ]
+        },
+        {
+          "required": [
+            "norm_by_attr"
           ]
         },
         {
@@ -236,25 +240,89 @@
         },
         "norm": {
           "type": "string",
-          "pattern": "^(NRM|NORM)-[0-9]{5}$"
+          "pattern": "^NRM-[0-9]{5}$"
         },
         "norm_by_length": {
-          "type": "array",
-          "minItems": 2,
-          "items": {
-            "type": "object",
-            "required": [
-              "norm"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "norm": {
+          "type": "object",
+          "required": [
+            "attr",
+            "title",
+            "bands"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "attr": {
+              "type": "string",
+              "pattern": "^[a-z_]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "bands": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "norm"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "norm": {
+                    "type": "string",
+                    "pattern": "^NRM-[0-9]{5}$"
+                  },
+                  "below_km": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "norm_by_attr": {
+          "type": "object",
+          "required": [
+            "attr",
+            "title",
+            "norms"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "attr": {
+              "type": "string",
+              "pattern": "^[a-z_]+$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "norms": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
                 "type": "string",
-                "pattern": "^(NRM|NORM)-[0-9]{5}$"
-              },
-              "below_km": {
-                "type": "number",
-                "exclusiveMinimum": 0
+                "pattern": "^NRM-[0-9]{5}$"
+              }
+            },
+            "if_missing": {
+              "type": "object",
+              "required": [
+                "attr",
+                "assumption_id"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "attr": {
+                  "type": "string",
+                  "pattern": "^[a-z_]+$"
+                },
+                "assumption_id": {
+                  "type": "string",
+                  "pattern": "^ASM-[0-9]{4}$"
+                }
               }
             }
           }

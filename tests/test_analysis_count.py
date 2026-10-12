@@ -13,20 +13,20 @@ from buffer_fixtures import parcel, poi, project_with_registry, rect, write_laye
 from cm_carto import gpkg, paths
 from cm_carto.analysis import buffers, count
 
-ZONE = "buffers:szz-industry-v-parcels-z"
+ZONE = "buffers:szz-industry-parcels-z"
 
 
 def world(tmp_path):
-    """Участок z 100x100 м, буфер 50 м по NORM-90002: зона x и y от -50 до 150 (с закруглением углов)."""
+    """Участок z 100x100 м, буфер 50 м по NRM-90002: зона x и y от -50 до 150 (с закруглением углов)."""
     project = project_with_registry(tmp_path)
     write_layers(
         project,
-        parcels=[parcel("z", rect(0, 0, 100, 100)), parcel("half", rect(100, 0, 300, 100), "Магазины"),
+        parcels=[parcel("z", rect(0, 0, 100, 100), hazard_class="V"), parcel("half", rect(100, 0, 300, 100), "Магазины"),
                  parcel("touch", rect(150, 0, 250, 100)), parcel("far", rect(400, 0, 500, 100))],
         poi_other=[poi("in1", 10, 10), poi("in2", 120, 50, "банк"), poi("edge", 150, 50), poi("out", 300, 300)],
         roads=[street("cross", [(X0 - 100, Y0 + 50), (X0 + 100, Y0 + 50)]),
                street("away", [(X0 - 100, Y0 + 500), (X0 + 100, Y0 + 500)])])
-    buffers.save(project, buffers.rows(project, "szz-industry-v", ["parcels:z"]))
+    buffers.save(project, buffers.rows(project, "szz-industry", ["parcels:z"]))
     return project
 
 
@@ -99,7 +99,7 @@ def test_drafts_are_check_calc_with_norm_inputs_and_pass_the_fact_schema(tmp_pat
     validator = jsonschema.Draft202012Validator(json.loads(paths.schema("fact").read_text(encoding="utf-8")))
     drafts = count.drafts(project, ZONE, "parcels") + count.drafts(project, ZONE, "roads")
     for number, draft in enumerate(drafts, start=1):
-        assert draft["status"] == "check" and draft["inputs"] == ["NORM-90002"] and "id" not in draft
+        assert draft["status"] == "check" and draft["inputs"] == ["NRM-90002"] and "id" not in draft
         assert list(validator.iter_errors({"id": f"CALC-{number:05d}", **draft})) == []
         assert any(validator.iter_errors(draft))
     layers = {s["doc_id"] for d in drafts for s in d["sources"]}

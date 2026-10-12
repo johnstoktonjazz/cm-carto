@@ -74,10 +74,10 @@ p = project.load(Path("$EX/project.yaml"))
 parts = sorted(p.geo.glob("parts/*.gpkg"))
 print("части:", ", ".join(x.name for x in parts))
 # Слияние с проверкой контракта — больше минуты на полигоне; те же части (input_hash) — файл уже собран.
-if p.gpkg.is_file() and gpkg.meta(p.gpkg)["input_hash"] == gpkg.input_hash(*parts):
+if p.gpkg.is_file() and gpkg.meta(p.gpkg)["input_hash"] == gpkg.merge_hash(parts, p.attributes):
     print(p.gpkg, "— части не менялись")
 else:
-    gpkg.merge(parts, p.gpkg, p.name, p.crs, p.crs_name)
+    gpkg.merge(parts, p.gpkg, p.name, p.crs, p.crs_name, p.attributes)
     print(p.gpkg)
 PY
 

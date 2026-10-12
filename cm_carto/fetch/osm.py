@@ -83,9 +83,22 @@ def records(features: gpd.GeoDataFrame):
         yield f"osm-{ELEMENT[element]}{number}", row, geom
 
 
+def travel(row: dict) -> str | None:
+    """Движение по улице OSM относительно направления линии: along, against или None (двустороннее). Значение тега
+    oneway — по таблице правил; без тега — улицы, которые OSM считает односторонними сама (implied)."""
+    value = tag(row, "oneway")
+    if value is not None:
+        return rules()["osm"]["oneway"]["values"].get(value)
+    if any(tag(row, k) == v for k, v in (rule.split("=") for rule in rules()["osm"]["oneway"]["implied"])):
+        return "along"
+    return None
+
+
 def lines(features: gpd.GeoDataFrame, layer: str, column: str, classes: dict, label: str, date: str, area,
           license: str, names: common.Names) -> gpd.GeoDataFrame:
-    """Линейные слои roads (highway) и rail (railway): класс по таблице, тоннель по тегам tunnel и covered."""
+    """Линейные слои roads (highway) и rail (railway): класс по таблице, тоннель по тегам tunnel и covered. У улиц еще
+    мост (тег bridge, кроме no) и односторонность (`travel`): линия односторонней улицы пишется по направлению
+    движения, поэтому при движении против линии OSM (oneway=-1) она разворачивается."""
     rule = rules()[layer]
     attr = "road_class" if layer == "roads" else "rail_class"
     rows = []
@@ -97,12 +110,16 @@ def lines(features: gpd.GeoDataFrame, layer: str, column: str, classes: dict, la
             continue
         if layer == "rail" and value == "main" and tag(row, "service") in rules()["rail"]["siding_service"]:
             value = "siding"
-        geom = common.lines_of(shapely.intersection(geom, area))
+        direction = travel(row) if layer == "roads" else None
+        geom = common.lines_of(shapely.intersection(shapely.reverse(geom) if direction == "against" else geom, area))
         if geom is None:
             continue
         tunnel = tag(row, "tunnel") not in (None, "no") or tag(row, "covered") == "yes"
-        rows.append({"key": key, "name": names.osm(row), "kind": rule["kind"][value], "label": label, "date": date,
-                     "license": license, "geometry": geom, attr: value, "tunnel": tunnel})
+        item = {"key": key, "name": names.osm(row), "kind": rule["kind"][value], "label": label, "date": date,
+                "license": license, "geometry": geom, attr: value, "tunnel": tunnel}
+        if layer == "roads":
+            item |= {"bridge": tag(row, "bridge") not in (None, "no"), "oneway": direction is not None}
+        rows.append(item)
     return common.table(layer, rows, features.crs)
 
 

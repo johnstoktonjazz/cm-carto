@@ -1,9 +1,11 @@
-"""Чтение слоев геопакета проекта для анализа: части `geo/parts/*.gpkg`, а если частей нет — `geo/project.gpkg`."""
+"""Чтение слоев геопакета проекта для анализа: части `geo/parts/*.gpkg`, а если частей нет — `geo/project.gpkg`.
+Атрибуты автора (carto.attributes) накладываются на объекты при чтении, как при сборке геопакета проекта."""
 
 import geopandas as gpd
 import pandas as pd
 import pyogrio
 
+from cm_carto import gpkg
 from cm_carto.project import Project
 
 
@@ -26,7 +28,8 @@ def layer(project: Project, name: str, where: str | None = None, bbox=None) -> g
     repeated = sorted(set(frame["object_id"][frame["object_id"].duplicated()]))
     if repeated:
         raise ValueError(f"слой {name}: object_id повторяется в частях: {repeated[:5]}")
-    return gpd.GeoDataFrame(frame, geometry="geometry", crs=pyogrio.read_info(found[0], layer=name)["crs"])
+    frame = gpd.GeoDataFrame(frame, geometry="geometry", crs=pyogrio.read_info(found[0], layer=name)["crs"])
+    return gpkg.with_attributes(name, frame, gpkg.author_attributes(project.attributes))
 
 
 def one(project: Project, object_id: str) -> gpd.GeoSeries:

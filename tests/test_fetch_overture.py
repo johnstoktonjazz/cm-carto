@@ -35,7 +35,8 @@ def test_roads_split_by_osm_element_and_tunnel(cached):
     roads = overture.layout(cached, RELEASE)["roads"].set_index("object_id")
     # сегмент Overture из двух элементов OSM режется по ним; участок под землей — отдельная запись с суффиксом
     assert set(roads.index) == {"roads:osm-w1", "roads:osm-w2", "roads:osm-w2-t", "roads:osm-w3", "roads:osm-w4",
-                                "roads:osm-w5", "roads:osm-w6", "roads:ovt-seg-6"}
+                                "roads:osm-w5", "roads:osm-w6", "roads:ovt-seg-6", "roads:osm-w9", "roads:osm-w9-b",
+                                "roads:osm-w10", "roads:osm-w10-o"}
     assert roads.loc["roads:osm-w1", "road_class"] == "main"
     assert not roads.loc["roads:osm-w2", "tunnel"] and roads.loc["roads:osm-w2-t", "tunnel"]
     assert roads.loc["roads:osm-w3", "road_class"] == "local" and roads.loc["roads:osm-w4", "road_class"] == "district"
@@ -44,6 +45,74 @@ def test_roads_split_by_osm_element_and_tunnel(cached):
     assert roads.loc["roads:ovt-seg-6", "source_label"] == f"Esri Community Maps через Overture Maps {RELEASE}"
     assert roads.loc["roads:ovt-seg-6", "source_license"] == "CC-BY-4.0"
     assert set(roads["source_date"]) == {"2026-09-23"} and set(roads["status"]) == {"reference"}
+
+
+def heading(row) -> tuple[float, float]:
+    """Куда идет первая часть линии: (dx, dy) от первой вершины к последней."""
+    coords = list(row.geoms[0].coords)
+    return coords[-1][0] - coords[0][0], coords[-1][1] - coords[0][1]
+
+
+def test_roads_oneway_from_denied_heading(cached):
+    """Односторонность — запрет с одним условием heading; запрет для велосипедов и без запрета — двустороннее.
+    Запрет backward оставляет движение по линии сегмента, запрет forward — против нее (линия разворачивается)."""
+    roads = overture.layout(cached, RELEASE)["roads"].set_index("object_id")
+    assert roads["oneway"].map(type).eq(bool).all() and roads["bridge"].map(type).eq(bool).all()
+    one = lambda key: roads.loc[f"roads:{key}", "oneway"]
+    assert one("osm-w4") and one("osm-w5") and not one("osm-w3") and not one("osm-w6") and not one("ovt-seg-6")
+    assert heading(roads.loc["roads:osm-w4", "geometry"])[1] > 0      # сегмент идет на север, запрет backward
+    assert heading(roads.loc["roads:osm-w5", "geometry"])[1] < 0      # запрет forward: линия развернута на юг
+
+
+def test_roads_oneway_applies_to_its_part_of_the_segment(cached):
+    """Запрет на первой половине сегмента (между) относится к участку первого элемента OSM, второй остается двусторонним."""
+    roads = overture.layout(cached, RELEASE)["roads"].set_index("object_id")
+    assert roads.loc["roads:osm-w1", "oneway"] and not roads.loc["roads:osm-w2", "oneway"]
+    assert not roads.loc["roads:osm-w2-t", "oneway"]
+
+
+def test_roads_bridge_from_flag(cached):
+    roads = overture.layout(cached, RELEASE)["roads"]
+    assert list(roads.loc[roads["bridge"], "object_id"]) == ["roads:osm-w6", "roads:osm-w9-b"]
+
+
+def test_one_osm_element_with_different_attributes_gets_distinct_keys(cached):
+    """Мост в середине односторонней улицы: -b у моста (различается), -o не нужно (одностороннее все); односторонний
+    участок элемента без односторонней второй половины получает -o. Линии идут по движению (на восток)."""
+    roads = overture.layout(cached, RELEASE)["roads"].set_index("object_id")
+    assert roads.loc["roads:osm-w9", ["oneway", "bridge"]].tolist() == [True, False]
+    assert roads.loc["roads:osm-w9-b", ["oneway", "bridge"]].tolist() == [True, True]
+    assert len(roads.loc["roads:osm-w9", "geometry"].geoms) == 2          # до моста и после
+    assert roads.loc["roads:osm-w10-o", ["oneway", "bridge"]].tolist() == [True, False]
+    assert roads.loc["roads:osm-w10", ["oneway", "bridge"]].tolist() == [False, False]
+    for key in ("osm-w9", "osm-w9-b", "osm-w10-o"):
+        assert all(part.coords[-1][0] > part.coords[0][0] for part in roads.loc[f"roads:{key}", "geometry"].geoms)
+
+
+def test_rail_has_no_road_attributes(cached):
+    assert not {"oneway", "bridge"} & set(overture.layout(cached, RELEASE)["rail"].columns)
+
+
+def test_stale_cache_without_columns_is_refused(cached):
+    """Кеш, снятый до появления столбца в правилах, — понятная ошибка с указанием, что делать."""
+    import pyarrow.parquet as pq
+
+    path = overture.cache_dir(cached, RELEASE) / "transportation-segment.parquet"
+    pq.write_table(pq.read_table(path).drop_columns(["access_restrictions"]), path)
+    with pytest.raises(ValueError, match="access_restrictions.*удалить кеш"):
+        overture.layout(cached, RELEASE)
+
+
+def test_both_directions_denied_is_error(cached, monkeypatch):
+    original = overture.oneway_rules
+
+    def both(restrictions):
+        found = original(restrictions)
+        return found + [{"between": None, "direction": "against"}] if found else found
+
+    monkeypatch.setattr(overture, "oneway_rules", both)
+    with pytest.raises(ValueError, match="в обе стороны"):
+        overture.layout(cached, RELEASE)
 
 
 def test_unknown_road_class_is_error(cached, monkeypatch):

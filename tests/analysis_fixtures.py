@@ -1,6 +1,7 @@
 """Общее для тестов анализа: решетка улиц во временном проекте. Тестов здесь нет."""
 
 import argparse
+import copy
 import shutil
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import geopandas as gpd
 from shapely.geometry import MultiLineString, MultiPolygon, Point, box
 
 from cm_carto import gpkg, project as project_mod
-from cm_carto.analysis import cli
+from cm_carto.analysis import cli, params
 
 EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "taganrog" / "project.yaml"
 X0, Y0, STEP = 500000.0, 5000000.0, 100.0
@@ -18,14 +19,23 @@ SOURCE = {"status": "reference", "source_label": "тестовые улицы", 
 
 
 def project_in(tmp_path: Path) -> project_mod.Project:
-    """Анкета примера во временной папке: `tmp_path/project.yaml`, геопакет — `tmp_path/geo`."""
+    """Анкета примера во временной папке: `tmp_path/project.yaml` и атрибуты автора рядом, геопакет — `tmp_path/geo`."""
     shutil.copy(EXAMPLE, tmp_path / "project.yaml")
+    shutil.copy(EXAMPLE.parent / "attributes.yaml", tmp_path / "attributes.yaml")
     return project_mod.load(tmp_path / "project.yaml")
 
 
-def street(key: str, coords: list[tuple[float, float]], road_class: str = "local") -> dict:
+def modes(walk: bool = False, drive: bool = True) -> dict:
+    """Параметры анализа с явно заданным `directed` режимов: тесты не зависят от значений в rules/analysis.yaml."""
+    changed = copy.deepcopy(params.load())
+    changed["modes"]["walk"]["directed"], changed["modes"]["drive"]["directed"] = walk, drive
+    return changed
+
+
+def street(key: str, coords: list[tuple[float, float]], road_class: str = "local", **attrs) -> dict:
+    """Улица слоя roads; attrs — oneway, bridge, tunnel (по умолчанию tunnel = False, остальных нет, как у источника без них)."""
     return {"object_id": f"roads:{key}", "kind": "улица", "road_class": road_class, "tunnel": False, **SOURCE,
-            "geometry": MultiLineString([coords])}
+            **attrs, "geometry": MultiLineString([coords])}
 
 
 def lattice(columns: range, rows: range, road_class: str = "local", prefix: str = "") -> list[dict]:

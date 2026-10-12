@@ -38,7 +38,7 @@ def run_buffer(args) -> int:
     rows = buffers.rows(project, args.rule, args.origin)
     out = buffers.save(project, rows)
     for row in rows:
-        print(f"{row['object_id']}: {row['distance_m']:g} м по {row['fact_ids'][0]}, {row['geometry'].area / 1e4:.2f} га → {out}")
+        print(f"{row['object_id']}: {row['distance_m']:g} м по {', '.join(row['fact_ids'])}, {row['geometry'].area / 1e4:.2f} га → {out}")
     return 0
 
 

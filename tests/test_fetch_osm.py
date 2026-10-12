@@ -33,6 +33,33 @@ def test_layers_from_xml(proj, tmp_path):
     assert set(frames["roads"]["source_license"]) == {"ODbL 1.0"}
 
 
+def test_oneway_and_bridge(proj, tmp_path):
+    """oneway=yes — по линии; -1 — против, линия развернута; junction=roundabout — одностороннее без тега oneway;
+    oneway=no и bridge=no — нет. Мост — bridge=yes."""
+    osm.download(proj, tmp_path / "data.osm", "2026-10-01")
+    roads = osm.layout(proj)["roads"].set_index("name")
+    assert roads.loc["вперед-мост", ["oneway", "bridge"]].tolist() == [True, True]
+    assert roads.loc["назад", ["oneway", "bridge"]].tolist() == [True, False]
+    assert roads.loc["кольцо", ["oneway", "bridge"]].tolist() == [True, False]
+    assert roads.loc["двусторонняя", ["oneway", "bridge"]].tolist() == [False, False]
+    assert roads.loc["Первая улица", ["oneway", "bridge"]].tolist() == [False, False]
+    forward, back = (list(roads.loc[n, "geometry"].geoms[0].coords) for n in ("вперед-мост", "назад"))
+    assert forward[-1][0] > forward[0][0]       # линия OSM идет на восток, oneway=yes: так и остается
+    assert back[-1][0] < back[0][0]             # та же ориентация, oneway=-1: движение на запад, линия развернута
+    assert not {"oneway", "bridge"} & set(osm.layout(proj)["rail"].columns)
+
+
+@pytest.mark.parametrize("tags, expected", [({"oneway": "yes"}, "along"), ({"oneway": "1"}, "along"),
+                                            ({"oneway": "true"}, "along"), ({"oneway": "-1"}, "against"),
+                                            ({"oneway": "reverse"}, "against"), ({"oneway": "no"}, None),
+                                            ({"oneway": "reversible"}, None), ({"junction": "roundabout"}, "along"),
+                                            ({"junction": "roundabout", "oneway": "no"}, None),
+                                            ({"highway": "motorway_link"}, "along"), ({"highway": "residential"}, None),
+                                            ({}, None)])
+def test_travel_direction(tags, expected):
+    assert osm.travel(tags) == expected
+
+
 def test_sea_is_water_right_of_coastline(proj, tmp_path):
     """Береговая линия идет на запад: суша слева (юг), вода справа (север) — море есть, оно севернее линии."""
     osm.download(proj, tmp_path / "data.osm", "2026-10-01")

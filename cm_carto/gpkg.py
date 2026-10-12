@@ -15,15 +15,18 @@ import geopandas as gpd
 import jsonschema
 import pandas as pd
 import pyogrio
+import yaml
 from pyproj import CRS
 from shapely.geometry import MultiLineString, MultiPolygon
 
 from cm_carto import paths
 
-CONTRACT = "geopackage/1.1.0"
+CONTRACT = "geopackage/1.2.0"
 FIELDS = ["object_id", "name", "kind", "status", "source_doc", "source_label", "source_date", "source_license",
           "fact_ids", "digitized_from"]
 LISTS = {"fact_ids", "confirmed_by"}
+# Атрибуты, которые вводит автор проекта или документ (контракт, раздел 1.2.0): только они задаются файлом атрибутов.
+AUTHOR = {"parcels": {"hazard_class"}, "poi_other": {"hazard_class"}, "roads": {"road_category"}, "water": {"length_km"}}
 # Дата изменения в gpkg_contents: постоянная, иначе файл различается при каждой сборке (контракт, «Хранение»).
 FIXED_DATE = "2000-01-01T00:00:00.000Z"
 
@@ -183,19 +186,66 @@ def check(path: Path) -> list[str]:
     return errors + validate(dump(frames, info["project"], info["crs"], info["input_hash"]))
 
 
-def merge(parts: list[Path], out: Path, project_name: str, crs: CRS, crs_name: str) -> Path:
-    """Сборка геопакета проекта из частей: слои одного имени складываются, повтор object_id — ошибка.
+def author_attributes(path: Path | None) -> dict[str, dict]:
+    """Файл атрибутов автора (анкета: carto.attributes): `object_id: {атрибут: значение}`. Атрибут — из AUTHOR для
+    слоя объекта, значение — по схеме атрибута контракта; проверяется один раз при загрузке."""
+    if path is None:
+        return {}
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    errors = []
+    for object_id, values in data.items():
+        layer = object_id.split(":", 1)[0]
+        for attr, value in values.items():
+            if attr not in AUTHOR.get(layer, set()):
+                errors.append(f"{object_id}: {attr} — не атрибут автора слоя {layer} "
+                              f"(атрибуты автора: {', '.join(f'{k}.{a}' for k, v in AUTHOR.items() for a in sorted(v))})")
+                continue
+            errors += [f"{object_id}: {attr} = {value!r}: {e.message}"
+                       for e in jsonschema.Draft202012Validator(layers()[layer][1][attr]).iter_errors(value)]
+    if errors:
+        raise ValueError(f"{path}: атрибуты автора не проходят контракт {CONTRACT}:\n  " + "\n  ".join(errors))
+    return data
+
+
+def with_attributes(name: str, frame: gpd.GeoDataFrame, attributes: dict[str, dict]) -> gpd.GeoDataFrame:
+    """Слой с атрибутами автора: значение файла заменяет значение части у объекта с тем же object_id."""
+    own = {oid: values for oid, values in attributes.items() if oid.split(":", 1)[0] == name}
+    if not own:
+        return frame
+    frame = frame.copy()
+    for object_id, values in own.items():
+        rows = frame["object_id"] == object_id
+        for attr, value in values.items():
+            if attr not in frame:
+                frame[attr] = pd.Series([None] * len(frame), index=frame.index, dtype=object)
+            frame.loc[rows, attr] = value
+    return frame
+
+
+def merge_hash(parts: list[Path], attributes: Path | None) -> str:
+    """input_hash геопакета проекта: части и файл атрибутов автора."""
+    return input_hash(*sorted(parts), *([attributes] if attributes else []))
+
+
+def merge(parts: list[Path], out: Path, project_name: str, crs: CRS, crs_name: str, attributes: Path | None) -> Path:
+    """Сборка геопакета проекта из частей: слои одного имени складываются, повтор object_id — ошибка; атрибуты автора
+    (carto.attributes) накладываются на объекты, объект файла атрибутов, которого нет в частях, — ошибка.
 
     Хэш частей берется до чтения и сверяется после: часть, которую переписывали во время чтения, дала бы неполный
     геопакет с хэшем готовой части, и он выдавал бы себя за свежий (Э-014)."""
     parts = sorted(parts)
-    before = input_hash(*parts)
+    before = merge_hash(parts, attributes)
     collected: dict[str, list[gpd.GeoDataFrame]] = {}
     for part in parts:
         for name, frame in read(part).items():
             collected.setdefault(name, []).append(frame)
-    if input_hash(*parts) != before:
+    if merge_hash(parts, attributes) != before:
         raise RuntimeError(f"части геопакета менялись во время слияния ({', '.join(p.name for p in parts)}): собрать заново")
-    frames = {name: gpd.GeoDataFrame(pd.concat(items, ignore_index=True), crs=items[0].crs)
+    given = author_attributes(attributes)
+    frames = {name: with_attributes(name, gpd.GeoDataFrame(pd.concat(items, ignore_index=True), crs=items[0].crs), given)
               for name, items in collected.items()}
+    present = {oid for frame in frames.values() for oid in frame["object_id"]}
+    missing = sorted(set(given) - present)
+    if missing:
+        raise ValueError(f"{attributes}: объектов нет в частях геопакета: {missing}")
     return write(out, frames, project_name, crs, crs_name, before)

@@ -76,5 +76,5 @@ def test_command_ingests_folder_and_file(tmp_path, capsys):
     assert sorted(p.name for p in parts.iterdir()) == ["ingest-kpt-sample.gpkg", "ingest-kpt-sample.report.md",
                                                        "ingest-ppt-sample.gpkg", "ingest-ppt-sample.report.md"]
     assert "ppt-sample.dxf: объектов 40, не распознано 1" in capsys.readouterr().out
-    merged = gpkg.merge(sorted(parts.glob("*.gpkg")), tmp_path / "project.gpkg", "тест", project_in(tmp_path).crs, "EPSG:32637")
+    merged = gpkg.merge(sorted(parts.glob("*.gpkg")), tmp_path / "project.gpkg", "тест", project_in(tmp_path).crs, "EPSG:32637", None)
     assert gpkg.check(merged) == []                 # части разных входов сливаются без повтора object_id

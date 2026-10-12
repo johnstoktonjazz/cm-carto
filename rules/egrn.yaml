@@ -29,3 +29,4 @@ pzz:
     - {zone: ИТ, index: [ИТ], name_contains: ["инженерной", "транспортной"]}
     - {zone: Р, index: [Р], name_contains: ["рекреационн"]}
     - {zone: СН, index: [СН], name_contains: ["специального назначения"]}
+    - {zone: СХ, index: [СХ], name_contains: ["сельскохозяйственн"]}   # geopackage 1.2.0

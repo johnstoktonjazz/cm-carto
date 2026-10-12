@@ -1,13 +1,15 @@
 """Изохрона от объекта по графу улиц.
 
 Метод:
-1. Граф режима (`graph.build`): пешком — все классы улиц, кроме скоростных; на автомобиле — без пешеходных улиц и
-   дорожек, скорости по классам. Параметры — `rules/analysis.yaml`.
-2. Старт. Точка привязывается к ближайшему отрезку графа (дальше `point_snap_max_m` — ошибка): время до обоих
-   концов отрезка считается вдоль него, а часть самого отрезка вокруг точки достижима сразу. Контур стартует от
+1. Граф режима (`graph.build`): пешком — все классы улиц, кроме скоростных, неориентированный; на автомобиле — без
+   пешеходных улиц и дорожек, скорости по классам, ориентированный: одностороннюю улицу (`roads.oneway`) проходят
+   только по направлению линии. Параметры, в том числе какой режим ориентированный (`directed`), — `rules/analysis.yaml`.
+2. Старт. Точка привязывается к ближайшему отрезку графа (дальше `point_snap_max_m` — ошибка): время до концов
+   отрезка считается вдоль него (по односторонней улице — только до ее конца), а часть самого отрезка вокруг точки
+   достижима сразу (по односторонней — только впереди точки). Контур стартует от
    узлов графа не дальше `contour_boundary_tolerance_m` от его границы, время старта 0.
-3. Кратчайшее время до узлов — Дейкстра по времени ребер (длина / скорость класса).
-4. Достижимые части ребер: ребро доходит от каждого конца на остаток времени × скорость; на краю изохроны ребро
+3. Кратчайшее время до узлов — Дейкстра по времени ребер (длина / скорость класса), в ориентированном графе — по дугам.
+4. Достижимые части ребер: ребро доходит от каждого конца, с которого его можно пройти, на остаток времени × скорость; на краю изохроны ребро
    достижимо частично. Части, пришедшие с разных концов, объединяются.
 5. Полигон: полоса `buffer_m` вокруг достижимых частей (для контура — вместе с самим контуром), внутренние дыры
    закрыты, контур не упрощается: изохроны разных сроков от одного объекта вложены точно. Изохрона — оценка по
@@ -41,18 +43,25 @@ class Reach:
 
 
 def point_start(g: nx.MultiGraph, point: Point, snap_max: float):
-    """Привязка точки к отрезку: время до его концов, ребро и положение точки на нем, соединительная линия."""
+    """Привязка точки к отрезку: время до его концов, номер ребра и положение точки на нем, соединительная линия.
+    В ориентированном графе точка выходит на отрезок только в разрешенных направлениях: по односторонней улице —
+    только к концу линии."""
     edges = list(g.edges(keys=True, data=True))
-    u, v, key, edge = edges[int(STRtree([e[3]["line"] for e in edges]).nearest(point))]
+    edge = edges[int(STRtree([e[3]["line"] for e in edges]).nearest(point))][3]
     line, speed = edge["line"], edge["speed_m_min"]
     gap = line.distance(point)
     if gap > snap_max:
         raise ValueError(f"точка дальше {snap_max} м от ближайшего отрезка графа ({gap:.0f} м)")
     along = line.project(point)
-    seeds = {edge["start"]: along / speed}
-    seeds[edge["end"]] = min(seeds.get(edge["end"], float("inf")), (edge["length"] - along) / speed)
+    same = [e for *_, e in edges if e["edge"] == edge["edge"]]
+    from_start, from_end = any(e["from_start"] for e in same), any(e["from_end"] for e in same)
+    seeds = {}
+    if from_start:     # от начала линии к концу: до конца отрезка
+        seeds[edge["end"]] = (edge["length"] - along) / speed
+    if from_end:       # от конца линии к началу
+        seeds[edge["start"]] = min(seeds.get(edge["start"], float("inf")), along / speed)
     connector = [LineString([point, line.interpolate(along)])] if gap > 0 else []
-    return seeds, ((u, v, key), along), connector
+    return seeds, (edge["edge"], along, from_start, from_end), connector
 
 
 def contour_start(g: nx.MultiGraph, contour, tolerance: float) -> dict:
@@ -73,18 +82,27 @@ def times(g: nx.MultiGraph, seeds: dict, limit: float) -> dict:
 
 
 def reach(g: nx.MultiGraph, dist: dict, direct, minutes: float) -> Reach:
-    pieces, length, travel = [], 0.0, 0.0
+    spans, shapes = {}, {}
     for u, v, key, edge in g.edges(keys=True, data=True):
-        w, speed, line = edge["length"], edge["speed_m_min"], edge["line"]
-        spans = []
-        if edge["start"] in dist and dist[edge["start"]] < minutes:
-            spans.append((0.0, min(w, (minutes - dist[edge["start"]]) * speed)))
-        if edge["end"] in dist and dist[edge["end"]] < minutes:
-            spans.append((max(0.0, w - (minutes - dist[edge["end"]]) * speed), w))
-        if direct is not None and direct[0] == (u, v, key):
-            spans.append((max(0.0, direct[1] - minutes * speed), min(w, direct[1] + minutes * speed)))
+        w, speed = edge["length"], edge["speed_m_min"]
+        shapes[edge["edge"]] = (edge["line"], speed)
+        found = spans.setdefault(edge["edge"], [])
+        if edge["from_start"] and edge["start"] in dist and dist[edge["start"]] < minutes:
+            found.append((0.0, min(w, (minutes - dist[edge["start"]]) * speed)))
+        if edge["from_end"] and edge["end"] in dist and dist[edge["end"]] < minutes:
+            found.append((max(0.0, w - (minutes - dist[edge["end"]]) * speed), w))
+    if direct is not None:
+        number, along, from_start, from_end = direct
+        line, speed = shapes[number]
+        if from_start:
+            spans[number].append((along, min(line.length, along + minutes * speed)))
+        if from_end:
+            spans[number].append((max(0.0, along - minutes * speed), along))
+    pieces, length, travel = [], 0.0, 0.0
+    for number, found in spans.items():
+        line, speed = shapes[number]
         merged = []
-        for start, end in sorted(spans):
+        for start, end in sorted(found):
             if merged and start <= merged[-1][1]:
                 merged[-1][1] = max(merged[-1][1], end)
             else:

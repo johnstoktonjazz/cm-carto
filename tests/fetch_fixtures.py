@@ -55,6 +55,12 @@ def osm_xml() -> str:
     way([(38.006, 47.004), (38.0065, 47.004), (38.0065, 47.0045), (38.006, 47.0045)], {"leisure": "park"}, closed=True)
     way([(38.0045, 47.004), (38.0048, 47.004), (38.0048, 47.0042), (38.0045, 47.0042)],
         {"natural": "water", "water": "pond"}, closed=True)
+    # южный край охвата, вне кварталов: односторонние улицы, мост, кольцо, двусторонняя улица с oneway=no
+    way([(38.001, 47.0003), (38.003, 47.0003)], {"highway": "residential", "oneway": "yes", "bridge": "yes", "name": "вперед-мост"})
+    way([(38.001, 47.0005), (38.003, 47.0005)], {"highway": "residential", "oneway": "-1", "name": "назад"})
+    way([(38.004, 47.0003), (38.0045, 47.0003), (38.0045, 47.0006), (38.004, 47.0006)],
+        {"highway": "residential", "junction": "roundabout", "name": "кольцо"}, closed=True)
+    way([(38.005, 47.0003), (38.007, 47.0003)], {"highway": "residential", "oneway": "no", "bridge": "no", "name": "двусторонняя"})
     node(38.0042, 47.0021, {"highway": "bus_stop", "name": "Перша вулиця", "name:ru": "Первая улица"})
     node(38.0052, 47.0041, {"amenity": "hospital", "name": "Больница"})
     return ('<?xml version="1.0" encoding="UTF-8"?><osm version="0.6" generator="test">'
@@ -94,21 +100,37 @@ def overture_cache(project) -> Path:
 
     w, e, s = WEST, EAST, SOUTH
     flags = [{"values": ["is_tunnel"], "between": [0.9, 1.0]}]
+    # heading отсчитывается от направления линии сегмента: запрет backward — движение только по линии
+    denied = lambda heading, between=None: {"access_type": "denied", "between": between, "when": {
+        "during": None, "heading": heading, "using": None, "recognized": None, "mode": None, "vehicle": None}}
+    # запрет для велосипедов с heading: односторонность улицы не задает
+    bikes = {"access_type": "denied", "between": None, "when": {
+        "during": None, "heading": "backward", "using": None, "recognized": None, "mode": ["bicycle"], "vehicle": None}}
     cols = overture.rules()["overture"]["datasets"]
     save("transportation-segment", cols["transportation/segment"]["columns"], [
         {"id": "seg-1", "names": {"primary": "Первая улица", "common": None}, "subtype": "road", "class_": None, "class": "secondary",
          "road_flags": flags, "geometry": line((w, 47.002), (e, 47.002)),
+         "access_restrictions": [denied("backward", [0.0, 0.5])],
          "sources": [source("w1@3", [0.0, 0.5]), source("w2@1", [0.5, 1.0])]},
         {"id": "seg-2", "subtype": "road", "class": "residential", "geometry": line((w, 47.006), (e, 47.006)),
          "sources": [source("w3@1")]},
         {"id": "seg-3", "subtype": "road", "class": "tertiary", "geometry": line((38.002, s), (38.002, 47.0085)),
+         "access_restrictions": [denied("backward")],
          "sources": [source("w4@1")]},
         {"id": "seg-4", "subtype": "road", "class": "residential", "geometry": line((38.008, s), (38.008, 47.0085)),
+         "access_restrictions": [denied("forward")],
          "sources": [source("w5@1")]},
         {"id": "seg-5", "subtype": "road", "class": "service", "geometry": line((38.004, 47.003), (38.004, 47.005)),
+         "road_flags": [{"values": ["is_bridge"], "between": None}], "access_restrictions": [bikes],
          "sources": [source("w6@1")]},
         {"id": "seg-6", "subtype": "road", "class": "footway", "geometry": line((38.0041, 47.003), (38.0041, 47.005)),
          "sources": [source(None, dataset="Esri Community Maps", license="CC-BY-4.0")]},
+        # один элемент OSM: мост в середине, весь односторонний; другой — односторонний только на первой половине
+        {"id": "seg-9", "subtype": "road", "class": "residential", "geometry": line((38.001, 47.0002), (38.003, 47.0002)),
+         "road_flags": [{"values": ["is_bridge"], "between": [0.4, 0.6]}], "access_restrictions": [denied("backward")],
+         "sources": [source("w9@1")]},
+        {"id": "seg-10", "subtype": "road", "class": "residential", "geometry": line((38.005, 47.0002), (38.007, 47.0002)),
+         "access_restrictions": [denied("backward", [0.0, 0.5])], "sources": [source("w10@1")]},
         {"id": "seg-7", "subtype": "rail", "class": "standard_gauge", "geometry": line((w, 47.001), (e, 47.001)),
          "sources": [source("w7@1")]},
         {"id": "seg-8", "subtype": "rail", "class": "tram", "geometry": line((w, 47.0015), (e, 47.0015)),

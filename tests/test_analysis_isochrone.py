@@ -6,10 +6,17 @@ import copy
 import pytest
 import shapely
 from shapely.geometry import Point
-from analysis_fixtures import STEP, STOP, lattice, project_in, run, square, stop, street, write_world, X0, Y0
+from analysis_fixtures import STEP, STOP, lattice, modes, project_in, run, square, stop, street, write_world, X0, Y0
 
 from cm_carto import gpkg
 from cm_carto.analysis import isochrone, params
+
+
+@pytest.fixture(autouse=True)
+def explicit_modes(monkeypatch):
+    """Какой режим ориентированный, задают правила; тесты не зависят от их значения: пешком — нет, на автомобиле — да."""
+    fixed = modes()
+    monkeypatch.setattr(params, "load", lambda: fixed)
 
 
 def world(tmp_path, contours=()):
@@ -127,6 +134,51 @@ def test_edge_piece_starts_from_the_node_it_was_reached_from(tmp_path, reverse):
             assert abs(x - centre.x) + abs(y - centre.y) <= 120 + 1e-6
     assert len(geom.geoms) == 1 and geom.area == pytest.approx(
         isochrone.polygon(reach, [], None, params.load()["isochrone"]).area)
+
+
+def reach_of(tmp_path, roads, i, mode, minutes):
+    """Достижимая сеть и полигон от остановки в точке (i, 0) на улицах roads."""
+    project = project_in(tmp_path)
+    write_world(project, roads, [stop("osm-n1", i, 0)])
+    return isochrone.compute(project, STOP, mode, [minutes])[2][minutes]
+
+
+def one_way(oneway=True):
+    return [street("a", [(X0, Y0), (X0 + 10 * STEP, Y0)], oneway=oneway)]
+
+
+def test_one_way_street_is_passed_only_forward_by_car_both_ways_on_foot(tmp_path):
+    """Улица 1000 м, на автомобиле 500 м/мин, пешком 80 м/мин. От точки в 300 м за 1 мин: по односторонней улице
+    только вперед (500 м), по двусторонней и пешком — в обе стороны."""
+    assert reach_of(tmp_path, one_way(), 3, "drive", 1)[0].length_m == pytest.approx(500)
+    assert reach_of(tmp_path, one_way(False), 3, "drive", 1)[0].length_m == pytest.approx(800)
+    assert reach_of(tmp_path, one_way(), 3, "walk", 1)[0].length_m == pytest.approx(160)
+
+
+def test_isochrone_from_entrance_differs_from_isochrone_from_exit(tmp_path):
+    """Односторонняя улица: от входа (100 м от начала) за 1 мин проезжают 500 м, от выхода (100 м до конца) — 100 м."""
+    entrance, exit_ = (reach_of(tmp_path, one_way(), i, "drive", 1) for i in (1, 9))
+    assert entrance[0].length_m == pytest.approx(500) and exit_[0].length_m == pytest.approx(100)
+    assert entrance[1].area > exit_[1].area * 1.5
+    assert entrance[1].bounds[0] > X0 - 100 and exit_[1].bounds[2] < X0 + 1000 + 100
+
+
+def test_one_way_ring_is_driven_around(tmp_path):
+    """Кольцо из четырех односторонних улиц против часовой стрелки: от точки на нижней улице за 1,5 мин (750 м)
+    проезжают 500 м до угла и 250 м вверх; назад по нижней улице — нет. Двусторонние улицы дали бы 1500 м."""
+    square_ = [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]
+    ring = lambda **attrs: [street(f"s{k}", [(X0 + a * STEP, Y0 + b * STEP), (X0 + c * STEP, Y0 + d * STEP)], **attrs)
+                            for k, ((a, b), (c, d)) in enumerate(zip(square_, square_[1:]))]
+    assert reach_of(tmp_path, ring(oneway=True), 5, "drive", 1.5)[0].length_m == pytest.approx(750)
+    assert reach_of(tmp_path, ring(oneway=False), 5, "drive", 1.5)[0].length_m == pytest.approx(1500)
+
+
+def test_directed_mode_comes_from_params(tmp_path, monkeypatch):
+    """Режим ориентированный не по имени, а по параметру `directed`."""
+    swapped = modes(walk=True, drive=False)
+    monkeypatch.setattr(params, "load", lambda: swapped)
+    assert reach_of(tmp_path, one_way(), 3, "drive", 1)[0].length_m == pytest.approx(800)
+    assert reach_of(tmp_path, one_way(), 3, "walk", 5)[0].length_m == pytest.approx(400)      # пешком, но режим ориентированный: только вперед
 
 
 def test_rules_name_temporary_assumptions_for_both_modes():
