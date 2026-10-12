@@ -35,3 +35,13 @@ def test_code_error_keeps_traceback(monkeypatch):
     monkeypatch.setattr(cli, "doctor", broken)
     with pytest.raises(KeyError):
         cli.main(["doctor"])
+
+
+def test_analysis_without_geopackage_is_one_line(tmp_path, capsys):
+    """Анализ до ingest и fetch: нет ни частей, ни project.gpkg — понятная ошибка, а не трассировка pyogrio."""
+    project = project_in(tmp_path)
+    with pytest.raises(SystemExit) as stop:
+        cli.main(["measure", str(project.root / "project.yaml"), "isochrones:walk-10-x"])
+    assert stop.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("ошибка: нет геопакета проекта") and "Traceback" not in err

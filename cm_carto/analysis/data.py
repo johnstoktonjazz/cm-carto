@@ -11,6 +11,9 @@ from cm_carto.project import Project
 
 def files(project: Project) -> list:
     parts = sorted((project.geo / "parts").glob("*.gpkg"))
+    if not parts and not project.gpkg.is_file():
+        raise FileNotFoundError(f"нет геопакета проекта: ни частей в {project.geo / 'parts'}, ни {project.gpkg}; "
+                                f"сначала cm-carto ingest или fetch")
     return parts or [project.gpkg]
 
 
