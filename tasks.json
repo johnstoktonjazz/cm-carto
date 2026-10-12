@@ -280,6 +280,42 @@
       "status": "done",
       "after": [],
       "note": "1239d7a; контракты в main через PR cm-contracts#2 (292d44a), подмодуль поднят"
+    },
+    {
+      "id": "M1",
+      "stage": "перенос",
+      "title": "анкета базы: project.name, territory.crs (cm_core 0.4.2)",
+      "agent": "anketa-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "M2",
+      "stage": "перенос",
+      "title": "статус DXF/SHP/GPKG из паспорта источника; неизвестный слой — предупреждение",
+      "agent": "ingest-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "M3",
+      "stage": "перенос",
+      "title": "doctor: начертания Open Sans на macOS; ошибки CLI и fetch без сети — понятным текстом",
+      "agent": "cli-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "M4",
+      "stage": "перенос",
+      "title": "роль красных линий в map.yaml — запрос верстке через Романа",
+      "agent": "оркестратор",
+      "status": "blocked",
+      "after": [],
+      "note": ""
     }
   ]
 }
