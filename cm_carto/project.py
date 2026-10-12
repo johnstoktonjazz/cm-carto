@@ -1,13 +1,15 @@
 """Анкета проекта project.yaml: все проектное — отсюда, в коде проектных значений нет.
 
-Анкету читает cm_core базы, владелец анкеты — база. Верхний уровень — общие поля базы (`name`, `crs`), картограф их
-только читает; другие поля базы на верхнем уровне допустимы, картограф их не знает и не трогает. Все остальное,
-что читает только картограф, лежит в разделе `carto:`:
+Анкету читает cm_core базы (0.4.2), владелец анкеты — база. Картограф читает из нее имя проекта (`project.name`) и
+систему координат (`territory.crs`); другие поля разделов `project` и `territory` и другие разделы базы он не знает и
+не трогает. Все, что читает только картограф, лежит в разделе `carto:`:
 
-    name: <имя проекта>
-    crs:
-      name: МСК-NN зона N         # как подписывать; EPSG-код или МСК с зоной
-      definition: "+proj=tmerc …" # что понимает PROJ: EPSG-код, строка PROJ или WKT (для МСК — параметры)
+    project:
+      name: <имя проекта>
+    territory:
+      crs:
+        name: МСК-NN зона N         # как подписывать; EPSG-код или МСК с зоной
+        definition: "+proj=tmerc …" # что понимает PROJ: EPSG-код, строка PROJ или WKT (для МСК — параметры)
     carto:
       extent: [xmin, ymin, xmax, ymax]        # охват проекта в системе координат проекта, ее единицы (метры)
       extent_wgs84: [xmin, ymin, xmax, ymax]  # необязательно: охват выгрузок внешних источников, градусы;
@@ -21,12 +23,13 @@
       fetch:
         overture_release: 2026-09-23.0        # выпуск Overture Maps для fetch overture
 
-Обязательны `name`, `crs` и в разделе `carto` — `extent`, `geo`. Остальное нужно командам, которые его читают
-(`inputs` и `fetch` — fetch, `language` — fetch и сверка, `rules` — ingest, `registry` — буферы).
+Обязательны `project.name`, `territory.crs.name`, `territory.crs.definition` и в разделе `carto` — `extent`, `geo`.
+Остальное нужно командам, которые его читают (`inputs` и `fetch` — fetch, `language` — fetch и сверка, `rules` —
+ingest, `registry` — буферы).
 
 Система координат проекта может быть любой, в том числе локальной (инженерной) или без параметров перехода к WGS84:
 ingest и render работают в ней и WGS84 не трогают. Параметры перехода (`+towgs84` или WKT BOUNDCRS в
-`crs.definition`) нужны только fetch: он переводит охват в WGS84 и данные источников в систему проекта.
+`territory.crs.definition`) нужны только fetch: он переводит охват в WGS84 и данные источников в систему проекта.
 """
 
 from dataclasses import dataclass
@@ -50,15 +53,15 @@ class Project:
 
     @property
     def name(self) -> str:
-        return self.data["name"]
+        return self.data["project"]["name"]
 
     @property
     def crs_name(self) -> str:
-        return self.data["crs"]["name"]
+        return self.data["territory"]["crs"]["name"]
 
     @property
     def crs(self) -> CRS:
-        return CRS.from_user_input(self.data["crs"]["definition"])
+        return CRS.from_user_input(self.data["territory"]["crs"]["definition"])
 
     @property
     def carto(self) -> dict:
@@ -77,7 +80,7 @@ class Project:
         СК и для СК без параметров перехода."""
         if not TransformerGroup(self.crs, 4326, always_xy=True, allow_ballpark=False).transformers:
             raise ValueError(f"{self.crs_name}: система координат проекта не переводится в WGS84 — нужны параметры "
-                             f"перехода (crs.definition: +towgs84 или WKT BOUNDCRS); без них fetch внешних источников "
+                             f"перехода (territory.crs.definition: +towgs84 или WKT BOUNDCRS); без них fetch внешних источников "
                              f"невозможен, ingest и render работают в СК проекта")
 
     @cached_property
@@ -135,19 +138,25 @@ class Project:
         return self.geo / "project.gpkg"
 
 
+LEGACY_HINT = "имя проекта — project.name, система координат — territory.crs (анкета базы, cm_core 0.4.2)"
+
+
 def load(path: Path) -> Project:
     path = Path(path).resolve()
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    for key in ("name", "crs", "carto"):
-        if key not in data:
-            raise ValueError(f"{path}: нет поля {key}")
+    for key in ("name", "crs"):
+        if key in data:
+            raise ValueError(f"{path}: поле {key} на верхнем уровне — {LEGACY_HINT}")
     for key in CARTO_FIELDS:
         if key in data:
             raise ValueError(f"{path}: поле {key} — в разделе carto анкеты (верхний уровень — поля базы, К-045)")
+    for field in ("project.name", "territory.crs.name", "territory.crs.definition", "carto.extent", "carto.geo"):
+        node = data
+        for key in field.split("."):
+            if not isinstance(node, dict) or key not in node:
+                raise ValueError(f"{path}: нет поля {field}")
+            node = node[key]
     carto = data["carto"]
-    for key in ("extent", "geo"):
-        if key not in carto:
-            raise ValueError(f"{path}: нет поля carto.{key}")
     for key in ("extent", "extent_wgs84"):
         if key in carto and not (len(carto[key]) == 4 and carto[key][0] < carto[key][2] and carto[key][1] < carto[key][3]):
             raise ValueError(f"{path}: carto.{key} — это [xmin, ymin, xmax, ymax], минимумы меньше максимумов: {carto[key]}")

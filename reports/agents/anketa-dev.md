@@ -30,3 +30,22 @@
 - Старая форма анкеты не поддерживается (одна форма). Анкеты других проектов, если они есть вне репозитория, нужно перенести в раздел `carto` перед следующим запуском: иначе ValueError с указанием поля.
 - Сообщения ошибок кеша fetch (`в project.yaml {bounds}`) не менялись - охват там итоговый, не поле анкеты.
 - Правки не закоммичены (коммитит оркестратор). Новый файл: `tests/test_project_anketa.py`.
+
+## Анкета базы: project, territory, 12.10
+
+Решение базы (cm_core 0.4.2): имя проекта - `project.name`, система координат - `territory.crs` объектом `{name, definition}`; картограф читает их и свое берет из `carto:`. Другие поля разделов `project` и `territory` и другие разделы он не знает и не трогает.
+
+### Что изменено
+- `cm_carto/project.py`: `Project.name` читает `project.name`, `crs_name` и `crs` - `territory.crs.name` и `territory.crs.definition`. `load` требует `project.name`, `territory.crs.name`, `territory.crs.definition`, `carto.extent`, `carto.geo` (ошибка «нет поля <путь>»). Верхнеуровневые `name` и `crs` - ошибка «поле <имя> на верхнем уровне - имя проекта - project.name, система координат - territory.crs (анкета базы, cm_core 0.4.2)» (даже если рядом есть новая форма: одна форма, без поддержки старой). Поля картографа на верхнем уровне - ошибка, текст прежний. Докстринг анкеты переписан в новой форме; отказ fetch теперь «нужны параметры перехода (territory.crs.definition: +towgs84 или WKT BOUNDCRS)» (начало фразы «нужны параметры перехода» прежнее, тесты на него не менялись).
+- `examples/taganrog/project.yaml` - в новой форме, комментарии сохранены.
+- Фикстуры анкет: `tests/fetch_fixtures.py`, `tests/test_render_map.py`, `tests/test_mcp.py`, `tests/test_project_crs.py` (4 места, включая подмену `crs` в `example.data`), `tests/test_no_project_words.py` (читает `project.name`, `territory.crs.*` примеров), `tests/test_project_anketa.py`. `test_render_attr_labels.py`, `test_ingest_project_rules.py` анкету не пишут (берут из примера, меняют только `carto`) - не менялись. Чужие тестовые файлы не правились; строк анкеты в них, кроме `tests/fetch_fixtures.py` (общая фикстура fetch и doctor - правка только строки анкеты), нет.
+- Новые и переписанные тесты `tests/test_project_anketa.py`: старая форма (`name`, `crs` по отдельности) - ошибка с подсказкой; нет `project.name` / `territory.crs.name` / `territory.crs.definition` - ошибка «нет поля ...»; нет разделов `project` или `territory` - ошибка; посторонние поля в `project`, `territory` и посторонние разделы грузятся и не трогаются, `name`/`crs_name`/`crs` читаются из новых полей.
+- Документы: `docs/ПЕРЕНОС.md` (блок анкеты, раздел «Поля базы: `project.name`, `territory.crs`», список обязательного, `territory.crs.definition` в абзаце про СК), `README.md`, `MAPS_USAGE.md`, `schema/map.schema.json` (описание `crs`: «совпасть с territory.crs.name анкеты»). `ПОДКЛЮЧЕНИЯ.md` полей `crs`/`name` анкеты не упоминает - не менялся. `scripts/` и `examples/recipes/` полей анкеты не читают (только `p.name`, `p.crs`, `p.crs_name` через `Project` и путь анкеты) - не менялись. Остальной код (`gpkg`, ingest, fetch, analysis, render) работает через свойства `Project` - не менялся.
+
+### Как проверено
+- `scripts/run.sh python -m pytest -q`: **381 passed**, 7 предупреждений сторонних библиотек. Первый прогон дал 4 падения в `tests/test_ingest_*.py` (dxf, project_rules, vector) - работа параллельного исполнителя ingest в момент прогона; после повторного прогона этих файлов и полного набора все проходят.
+- Результат сборки не меняется: в геопакет и provenance идут те же `project.name` и `territory.crs.name` (значения прежние), `input_hash` от текста анкеты не зависит. `scripts/build_k1.sh` не запускался (оркестратор).
+
+### Для сведения оркестратору
+- Исполнителям ingest и doctor/cli: их файлы по анкете не правились; общий `tests/fetch_fixtures.py` теперь пишет анкету в новой форме.
+- Правки не закоммичены.

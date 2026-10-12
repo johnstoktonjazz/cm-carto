@@ -9,7 +9,7 @@
 | Поле | Что задает |
 |---|---|
 | `place` | место макета: `sheet`, `wide`, `landscape`, `landscape_wide`, `square_large`, `square`, `portrait`, `square_small`, `thumb`; размер PNG равен размеру места |
-| `project` | `project.yaml` проекта, путь от папки описания (система координат `crs`, папка геоданных `carto.geo`) |
+| `project` | `project.yaml` проекта, путь от папки описания (система координат `territory.crs`, папка геоданных `carto.geo`) |
 | `data` | геопакет, если не `<carto.geo>/project.gpkg` |
 | `center` + `scale` | центр (`[x, y]` или `object_id`) и знаменатель масштаба |
 | `extent` | охват вместо центра и масштаба: `[xmin, ymin, xmax, ymax]` или `object_id`; масштаб подбирается сам |

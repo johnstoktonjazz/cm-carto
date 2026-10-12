@@ -35,7 +35,7 @@ def tool(name: str, **arguments):
 def project(tmp_path_factory):
     root = tmp_path_factory.mktemp("mcp")
     (root / "project.yaml").write_text(yaml.safe_dump(
-        {"name": "синтетический проект", "crs": {"name": CRS_NAME, "definition": CRS_NAME},
+        {"project": {"name": "синтетический проект"}, "territory": {"crs": {"name": CRS_NAME, "definition": CRS_NAME}},
          "carto": {"extent": [X - 5000, Y - 5000, X + 5000, Y + 5000], "geo": "geo"}}, allow_unicode=True), encoding="utf-8")
     blocks = [(f"b{i}", box(X + i * 220, Y, X + i * 220 + 200, Y + 200), {**OFFICIAL, "num": str(i)}) for i in range(-2, 2)]
     frames = {"blocks": rows("blocks", blocks),

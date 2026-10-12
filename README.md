@@ -44,7 +44,7 @@ cm-carto/scripts/setup_env.sh            # micromamba, QGIS 3.44 и геосте
 
 ## Устройство
 
-- `cm_carto/project.py` — анкета `project.yaml` (общие поля базы `name`, `crs`; поля картографа — в разделе `carto`: охват, папки).
+- `cm_carto/project.py` — анкета `project.yaml` (поля базы `project.name`, `territory.crs`; поля картографа — в разделе `carto`: охват, папки).
 - `cm_carto/gpkg.py` — запись, чтение, проверка и слияние геопакета по контракту; части `geo/parts/*.gpkg` → `geo/project.gpkg`.
 - `cm_carto/tokens.py`, `paths.py` — токены и стили верстки, контракты.
 - `examples/taganrog/` — город-полигон (К-001); `input/taganrog/` — образцы и кеш внешних источников.
