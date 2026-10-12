@@ -17,10 +17,14 @@ symbol — map.yaml: layers.<роль>.marker.shape; служебные слои
 линейка, легенда внутри и север — места, которые подписи подложки обходят (blockers: build.py передает их движку
 подписей QGIS до экспорта подложки).
 
-Подписи расставляет картограф (верстка их не двигает): по правилу стиля роли (max_features, min_size), позиции
-вокруг знака в порядке стилей верстки (справа сверху, слева сверху, справа снизу, слева снизу, справа, слева) с
-отступом text.placement.distance от края знака; подпись не задевает другие подписи, подписи подложки, знаки,
-границу территории, линейку, север, легенду внутри и край места. Не встала — отнесена с выноской (leader_to); не встала и так — в лог.
+Подписи расставляет картограф (верстка их не двигает): по правилу роли (Role.label: правило стандарта map.yaml и
+`label` описания карты — поле и стиль; max_features, min_size), позиции вокруг знака в порядке стилей верстки (справа
+сверху, слева сверху, справа снизу, слева снизу, справа, слева) с отступом text.placement.distance от края знака;
+подпись не задевает другие подписи, подписи подложки, знаки, границу территории, линейку, север, легенду внутри и край
+места. Не встала у знака — отнесена с выноской (leader_to); подпись площади — в центре внутри площади целиком, не
+встала — рядом вне площади на плашке с выноской от точки на объекте (второй проход, когда все подписи внутри уже
+стоят); не встала и так — в лог. Роль подложки с `label` описания (кварталы) подписывается так же: растр ее не
+подписывает.
 Размер текста — по метрике шрифта из style.yaml: font.files (кегль text.styles, перенос text.wrap_chars).
 Текст подписи — по TEXT.md верстки (labels.clean, правила rules/labels.yaml); перенос не отрывает предлог, сокращение
 и слово из rules/labels.yaml: keep_with_next от следующего слова (text.yaml: nbsp верстки).
@@ -33,6 +37,7 @@ import re
 from functools import cache
 
 import jsonschema
+import pyogrio
 import shapely
 from PIL import ImageFont
 from shapely import affinity
@@ -269,6 +274,7 @@ def choose_corner(std: dict, width: float, right, layers: list[dict], legend) ->
 class Overlay:
     def __init__(self, spec, std: dict, style: dict, layout, rect):
         self.spec, self.std, self.style, self.layout = spec, std, style, layout
+        self.rect = rect
         self.matrix = to_mm(spec.scale, rect)
         self.frame = box(0, 0, *spec.size_mm)
         self.measure = Measure(std, style)
@@ -442,15 +448,20 @@ class Overlay:
         return (self.frame.contains(shape_) and not any(shape_.intersects(o) for o in self.obstacles)
                 and not any(shape_.intersects(p) for p in self.placed))
 
-    def place(self, d, row: dict, text: str, style_key: str):
-        """Место подписи одного объекта: (at, anchor, leader_to или None) или None, если не встала."""
-        size = self.measure.size(text, style_key)
-        plate = (0, 0) if style_key in self.std["text"]["plate"]["except_styles"] else self.plate
-        rule = d.spec["label"]
-        placement = rule.get("placement", self.std["text"]["placement"][d.spec["geometry"]])
+    def placement(self, d, rule: dict) -> str:
+        return rule.get("placement", self.std["text"]["placement"][d.spec["geometry"]])
+
+    def plate_of(self, rule: dict) -> tuple[float, float]:
+        return (0, 0) if rule["style"] in self.std["text"]["plate"]["except_styles"] else self.plate
+
+    def place(self, d, row: dict, text: str, rule: dict):
+        """Место подписи одного объекта у знака или внутри площади: (at, anchor, leader_to или None) или None, если не
+        встала. Подпись площади — в центре, внутри площади целиком (MAPS.md, раздел 5). Подпись точки, не встав рядом, уходит с выноской (LEADER_STEPS); подпись площади, не встав внутри, — в
+        place_outside вторым проходом, когда все подписи внутри уже расставлены."""
+        size = self.measure.size(text, rule["style"])
+        plate = self.plate_of(rule)
+        placement = self.placement(d, rule)
         geom = row["mm"]
-        if placement == "along":
-            raise ValueError(f"роль {d.role.key}: подпись вдоль линии overlay 1.1.0 не выражает (нет угла)")
         if placement == "center":  # номер в знаке точки
             candidates = [((geom.x, geom.y), "c", None)]
         elif placement == "centroid":  # внутри контура: точка на поверхности, затем ближайшие к ней узлы сетки
@@ -468,41 +479,95 @@ class Overlay:
                            for extra in LEADER_STEPS for (dx, dy), anchor in AROUND]
         for at, anchor, leader in candidates:
             shape_ = text_box(at, anchor, size, plate)
-            if self.free(shape_):
+            if self.free(shape_) and (placement != "centroid" or geom.contains(text_box(at, anchor, size, (0, 0)))):
                 self.placed.append(shape_)
                 return at, anchor, leader
         return None
 
+    def place_outside(self, d, row: dict, text: str, rule: dict):
+        """Площадь, которой не нашлось места внутри (MAPS.md, раздел 5: выноска — точка на объекте, прямая линия, подпись
+        у конца): подпись рядом вне объекта на плашке (якорь не «c»), выноска от точки на поверхности объекта.
+        Подпись стоит за границей объекта по лучу из этой точки в одну из сторон AROUND, на text.placement.distance плюс
+        относ LEADER_STEPS; не задевает объект, другие подписи и их выноски, знаки и край места, выноска — другие подписи
+        и знаки. (at, anchor, leader_to) или None."""
+        size = self.measure.size(text, rule["style"])
+        geom = row["mm"]
+        point = geom.point_on_surface()
+        reach = math.hypot(*self.frame.bounds[2:])
+        gap = self.std["text"]["placement"]["distance"]
+        for extra in LEADER_STEPS:
+            for (dx, dy), anchor in AROUND:
+                norm = math.hypot(dx, dy)
+                ray = LineString([point, (point.x + dx / norm * reach, point.y + dy / norm * reach)])
+                inner = min((p for p in parts(geom.intersection(ray)) if p.geom_type == "LineString"),
+                            key=lambda p: p.distance(point))
+                edge = max(inner.coords, key=lambda c: math.hypot(c[0] - point.x, c[1] - point.y))
+                at = (edge[0] + dx * (gap + extra), edge[1] + dy * (gap + extra))
+                shape_ = text_box(at, anchor, size, self.plate)
+                leader = LineString([point, at])
+                if not shape_.intersects(geom) and self.free(shape_) and self.free(leader):
+                    self.placed += [shape_, leader]
+                    return at, anchor, (point.x, point.y)
+        return None
+
+    def label_rows(self, d) -> list[dict]:
+        """Объекты роли с подписью, по object_id. У роли подложки строки без геометрии (build.vector читает ее у данных и
+        улиц): она берется из геопакета по охвату карты."""
+        if d.role.level == "basemap":
+            found = pyogrio.read_dataframe(self.spec.data, layer=d.role.layer, columns=["object_id"], bbox=self.rect)
+            geoms = dict(zip(found["object_id"], found.geometry))
+            for row in d.rows:
+                row["mm"] = geometry_mm(geoms[row["object_id"]], self.matrix, self.frame)
+        return sorted((row for row in d.rows if not row["mm"].is_empty), key=lambda r: r["object_id"])
+
     def label_layers(self, drawn: list, entries: dict) -> list[dict]:
-        """Подписи по правилам стилей ролей; расставляются от верхней роли стандарта, внутри роли — по object_id."""
-        layers = []
-        for d in (d for d in drawn if "label" in d.spec):
-            rule = d.spec["label"]
-            rows = sorted((row for row in d.rows if not row["mm"].is_empty), key=lambda r: r["object_id"])
+        """Подписи по правилу роли (Role.label: стандарт верстки и описание карты); drawn — роли с правилом. Роли — от
+        верхней роли стандарта, внутри роли — по object_id. Первый проход: точки у знака (при тесноте с выноской) и
+        площади внутри; второй: площади, не вставшие внутри, — рядом с выноской. Не встала — в лог (unplaced)."""
+        layers, pending = [], []
+        for d in drawn:
+            rule = d.role.label
+            rows = self.label_rows(d)
             if len(rows) > rule.get("max_features", len(rows)):
                 continue
-            features = []
-            for row in rows:
-                text, geom = row.get(rule["field"]), row["mm"]
+            found = {}
+            for n, row in enumerate(rows):
+                text = row.get(rule["field"])
                 if text in (None, ""):
                     continue
-                if "min_size" in rule and geom.area < rule["min_size"] ** 2:  # как minFeatureSize QGIS у площадей
+                if "min_size" in rule and row["mm"].area < rule["min_size"] ** 2:  # как minFeatureSize QGIS у площадей
                     continue
                 text = self.measure.wrap(clean_label(str(text)))
-                spot = self.place(d, row, text, rule["style"])
-                if spot is None:
+                spot = self.place(d, row, text, rule)
+                if spot is not None:
+                    found[n] = self.label_feature(row, text, rule, spot)
+                elif self.placement(d, rule) == "centroid":
+                    pending.append((found, n, d, row, text, rule))
+                else:
                     self.unplaced.append(f"{d.role.key} {row['object_id']} «{text}»")
-                    continue
-                at, anchor, leader = spot
-                feature = {"id": row["object_id"], "text": text, "at": xy(at), "anchor": anchor,
-                           "size_role": rule["style"]}
-                if leader:
-                    feature["leader_to"] = xy(leader)
-                features.append(feature)
-            if features:
-                layers.append({"id": f"labels_{d.role.key}", "role": "label", "kind": "label",
-                               "source_label": entries[d.role.key]["source"], "features": features})
-        return list(reversed(layers))
+            layers.append((d, found))
+        for found, n, d, row, text, rule in pending:
+            spot = self.place_outside(d, row, text, rule)
+            if spot is None:
+                self.unplaced.append(f"{d.role.key} {row['object_id']} «{text}»")
+            else:
+                found[n] = self.label_feature(row, text, rule, spot)
+        out = []
+        for d, found in layers:
+            if found:
+                source = entries[d.role.key]["source"] if d.role.key in entries \
+                    else "; ".join(dict.fromkeys(source_text(row) for row in d.rows))
+                out.append({"id": f"labels_{d.role.key}", "role": "label", "kind": "label", "source_label": source,
+                            "features": [found[n] for n in sorted(found)]})
+        return list(reversed(out))
+
+    @staticmethod
+    def label_feature(row: dict, text: str, rule: dict, spot) -> dict:
+        at, anchor, leader = spot
+        feature = {"id": row["object_id"], "text": text, "at": xy(at), "anchor": anchor, "size_role": rule["style"]}
+        if leader:
+            feature["leader_to"] = xy(leader)
+        return feature
 
 
 def cuts_streets(spec_role: dict) -> bool:
@@ -542,7 +607,7 @@ def build(spec, std: dict, style: dict, drawn: list, legend_items: list, entries
     service = [o.scale_bar_layer(layers)] + ([o.north_layer()] if north else [])
     blockers = [b.bounds for b in o.blockers + [x for x in o.obstacles if x.geom_type == "Polygon"]]
     o.obstacles += [box(*r) for r in raster(sorted(blockers))]
-    labels = o.label_layers(data, entries)
+    labels = o.label_layers([d for d in drawn if d.role.label], entries)
     xmin, ymin, xmax, ymax = rect
     doc = {"basemap": basemap,
            "place": {"name": spec.place, "size_mm": {"width": spec.size_mm[0], "height": spec.size_mm[1]}},

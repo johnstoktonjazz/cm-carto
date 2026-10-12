@@ -34,6 +34,14 @@ layers:
 - `where` — отбор по атрибутам (синтаксис OGR SQL).
 - `within` — `object_id` контура: точки остаются только внутри контура, линии и площади — пересекающие его. Именно так считаются «школы в изохроне»: на карте и в счете одни и те же объекты.
 - `title` — строка легенды вместо стандартной.
+- `label` — атрибут слоя геопакета (атрибут контракта или общее поле `name`; строка или целое), по которому подписываются объекты роли: номер квартала, индекс зоны, номер участка. Заменяет поле подписи стандарта, остальное правило стандарта (`max_features`, `min_size`) действует; поле не из контракта слоя — ошибка при загрузке. Подпись — `kind: label` в `overlay.json`: площадь подписана в центре внутри себя, при тесноте — рядом вне объекта на плашке с выноской (`leader_to` на объекте); не встала и так — строка в логе.
+- `label_style` — стиль подписи, ключ `map.yaml: text.styles` (`label_major`, `label_minor`, `label`). Нужен вместе с `label` у роли, которой в стандарте не задано правило подписи (`blocks`); у роли с правилом (`parcels`, `zoning`) заменяет его стиль. Роль подложки с подписью в растре (улицы, вода, зелень) `label` не принимает.
+
+```yaml
+  blocks: {label: num, label_style: label_major}     # номера кварталов
+  zoning: {layer: zones_pzz, label: code}            # индексы зон (стиль и min_size — из стандарта)
+  parcels: {layer: sites, label: num}                # номера участков
+```
 
 Роли: `point_1`, `point_2`, `point_3` (группы объектов анализа), `photo_point`, `reach_walk`, `reach_drive`, `arrow`, `arrow_accent`, `leader`, `main_object`, `stop`, `buildings_proposed`, `territory`, `outside_owned`, `parcels`, `zone_sanitary`, `zone_water_protection`, `zone_roadside`, `zone_right_of_way`, `zoning` (зоны ПЗЗ, категории из поля `zone`), подложка: `road_express`, `road_main`, `road_district`, `road_local`, `road_pedestrian`, `railway`, `buildings_existing`, `green`, `water`, `blocks`. Незнакомая роль — ошибка со списком допустимых.
 

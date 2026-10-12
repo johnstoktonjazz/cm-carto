@@ -23,9 +23,9 @@ def fix_polygon(poly: Polygon | MultiPolygon) -> tuple[Polygon | MultiPolygon, b
 
 def check_extent(project: Project, frames: dict[str, gpd.GeoDataFrame]) -> None:
     """Все объекты должны лежать в охвате проекта: иначе чертеж или выписка не в проектной системе координат."""
-    area = gpd.GeoSeries([box(*project.extent_wgs84)], crs=4326).to_crs(project.crs).iloc[0]
+    area = box(*project.extent)
     outside = [f"{layer}:{oid}" for layer, frame in frames.items()
                for oid, geom in zip(frame["object_id"], frame.geometry) if not area.intersects(geom)]
     if outside:
-        raise ValueError(f"объектов вне охвата проекта (extent_wgs84): {len(outside)}, например {outside[:3]}; "
+        raise ValueError(f"объектов вне охвата проекта (extent): {len(outside)}, например {outside[:3]}; "
                          f"источник не в системе координат проекта {project.crs_name} или в других единицах")

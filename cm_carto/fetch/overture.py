@@ -63,7 +63,7 @@ def download(project: Project, release: str) -> Path:
     """Сырые выборки по охвату в кеш; при готовом кеше сеть не трогается."""
     folder = cache_dir(project, release)
     marker = folder / "SOURCE.yaml"
-    bounds = list(project.extent_wgs84)
+    bounds = list(project.fetch_extent_wgs84)
     if marker.exists():
         cached = yaml.safe_load(marker.read_text(encoding="utf-8"))
         if cached["extent_wgs84"] != bounds:

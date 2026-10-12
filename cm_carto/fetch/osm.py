@@ -28,7 +28,7 @@ def cache_dir(project: Project) -> Path:
 
 
 def query(project: Project) -> str:
-    west, south, east, north = project.extent_wgs84
+    west, south, east, north = project.fetch_extent_wgs84
     keys = "".join(f"nwr[{k}];" for k in rules()["osm"]["tag_keys"] + ["natural"])
     return (f"[out:xml][timeout:{rules()['osm']['overpass_timeout_s']}][bbox:{south},{west},{north},{east}];"
             f"({keys});(._;>>;);out meta;")
@@ -38,7 +38,7 @@ def download(project: Project, file: Path | None = None, date: str | None = None
     """Кеш выгрузки: файл data.osm и SOURCE.yaml. Готовый кеш сеть не трогает."""
     folder = cache_dir(project)
     marker = folder / "SOURCE.yaml"
-    bounds = list(project.extent_wgs84)
+    bounds = list(project.fetch_extent_wgs84)
     if marker.exists():
         cached = yaml.safe_load(marker.read_text(encoding="utf-8"))
         if cached["extent_wgs84"] != bounds:

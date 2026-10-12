@@ -34,6 +34,7 @@ def registry(args, project) -> Path:
 
 def run(args) -> int:
     project = project_module.load(args.project)
+    project.require_wgs84()
     if args.source == "overture":
         path = overture.run(project, args.release)
     elif args.source == "osm":

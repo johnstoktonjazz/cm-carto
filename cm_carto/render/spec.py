@@ -20,6 +20,8 @@ from cm_carto import gpkg, paths, project as project_file, tokens
 SCHEMA = paths.ROOT / "schema" / "map.schema.json"
 # Геометрия слоя геопакета (контракт) → геометрия роли в map.yaml.
 GEOMETRY = {"MultiPolygon": "polygon", "MultiLineString": "line", "Point": "point"}
+# Типы атрибутов контракта, из которых получается подпись.
+LABEL_TYPES = ("string", "integer")
 # Поле охвата по объекту (extent: <object_id>), мм места с каждой стороны.
 FIELD_MM = 5
 
@@ -49,6 +51,7 @@ class Role:
     level: str         # уровень map.yaml: levels
     within: str | None = None  # object_id контура: на карте только объекты внутри него
     contour: shapely.Geometry | None = None
+    label: dict | None = None  # правило подписи объектов в overlay (field, style, ...) или None: overlay не подписывает
 
 
 @dataclass(frozen=True)
@@ -100,6 +103,44 @@ def find(path: Path, data: Path, present: set[str], object_id: str) -> shapely.G
     if len(frame) != 1:
         raise ValueError(f"{path}: объект {object_id}: в {data.name} найдено {len(frame)}, нужен один")
     return frame.geometry.iloc[0]
+
+
+def label_rule(path: Path, std: dict, key: str, layer: str, options: dict) -> dict | None:
+    """Правило подписи объектов роли в overlay. Правило стандарта (map.yaml: label, у зон — zoning.label) действует,
+    `label` описания заменяет в нем поле (`field`), `label_style` — стиль (остальное — max_features, min_size, repeat,
+    placement — остается). У роли без правила в стандарте `label` включает подписи, стиль — `label_style`
+    (ключ map.yaml: text.styles): правила по умолчанию для такой роли в стандарте нет. Роль подложки подписывает
+    растр по стандарту: подпись из описания у нее — только там, где стандарт растровой подписи не задает."""
+    spec = role_spec(std, key)
+    own = spec.get("label")
+    field, style = options.get("label"), options.get("label_style")
+    if field is None:
+        if style is not None:
+            raise ValueError(f"{path}: роль {key}: label_style без label")
+        return None if spec["level"] == "basemap" else own
+    if spec["level"] == "basemap" and own:
+        raise ValueError(f"{path}: роль {key}: подписи роли уровня подложки рисует растр по map.yaml: layers.{key}.label "
+                         f"(поле {own['field']}), label описания их дублирует")
+    attrs = gpkg.layers()[layer][1]
+    if field != "name" and field not in attrs:
+        raise ValueError(f"{path}: роль {key}: label {field}: в слое {layer} нет такого атрибута "
+                         f"(общее поле name; атрибуты контракта: {', '.join(attrs) or 'нет'})")
+    if field != "name" and attrs[field].get("type") not in LABEL_TYPES:
+        raise ValueError(f"{path}: роль {key}: label {field}: атрибут типа {attrs[field].get('type')}, подпись "
+                         f"берется из {', '.join(LABEL_TYPES)}")
+    rule = {**own, "field": field} if own else {"field": field}
+    if style is not None:
+        if style not in std["text"]["styles"]:
+            raise ValueError(f"{path}: роль {key}: label_style {style}: нет в map.yaml: text.styles "
+                             f"({', '.join(std['text']['styles'])})")
+        rule["style"] = style
+    elif "style" not in rule:
+        raise ValueError(f"{path}: роль {key}: в map.yaml у роли нет правила подписи, стиль подписи задается "
+                         f"label_style (ключ map.yaml: text.styles, например label_major)")
+    if rule.get("placement", std["text"]["placement"][spec["geometry"]]) == "along":
+        raise ValueError(f"{path}: роль {key}: подпись вдоль линии overlay 1.1.0 не выражает (нет угла поворота), "
+                         f"подписывать можно точки и площади")
+    return rule
 
 
 def load(path: Path) -> Spec:
@@ -182,7 +223,7 @@ def read(path: Path) -> Spec:
             if contour.geom_type not in ("Polygon", "MultiPolygon"):
                 raise ValueError(f"{path}: роль {key}: within {within} — не контур ({contour.geom_type})")
         roles.append(Role(key, layer, options.get("where"), options.get("title", spec["title"]), spec["level"],
-                          within, contour))
+                          within, contour, label_rule(path, std, key, layer, options)))
 
     if "extent" in raw:
         if isinstance(raw["extent"], str):

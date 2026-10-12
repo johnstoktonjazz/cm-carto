@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "cm-carto/map/1.0.0",
+  "$id": "cm-carto/map/1.1.0",
   "title": "Описание карты картографа (YAML): место макета, охват, слои-роли со слоями геопакета, легенда",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Совместимо по смыслу с описанием карты верстки (cm_deck.qgis_render): те же place, center, scale, north, legend, layers.<роль>.title, out. Отличия: геопакет и система координат — из анкеты проекта (project, data), роль связана со слоем геопакета контракта geopackage и отбором (layer, where), источник, дата и статус в provenance собираются из данных, а не пишутся руками. Роли (ключи layers), места и ширины легенды — из cm-design/tokens/map.yaml, проверяются при загрузке.",
   "type": "object",
   "required": [
@@ -103,6 +103,16 @@
             "type": "string",
             "description": "строка легенды и имя слоя в provenance; по умолчанию title роли из map.yaml"
           },
+          "label": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "атрибут слоя геопакета (контракт geopackage: атрибут слоя или общее поле name; строка или целое), по которому подписываются объекты роли в overlay: номер квартала, индекс зоны, номер участка. Заменяет поле подписи стандарта (map.yaml: label.field), остальное правило стандарта (max_features, min_size, repeat) действует; у роли без правила подписи в стандарте включает подписи, стиль — label_style. Подпись площади — в центре, при тесноте — рядом с выноской (leader_to); линию overlay не подписывает (вдоль оси overlay 1.1.0 не выражает). У роли уровня подложки с подписью растра (улицы, вода, зелень) label не задается"
+          },
+          "label_style": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "стиль подписи — ключ map.yaml: text.styles (label_major, label_minor, label, label_number); обязателен вместе с label у роли, которой в стандарте не задано правило подписи (кварталы); у роли с правилом заменяет его стиль"
+          },
           "within": {
             "type": "string",
             "pattern": "^[a-z0-9_]+:.+$",
@@ -128,7 +138,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^(F-[0-9]{6}|CALC-[0-9]{5}|NORM-[0-9]{5}|ASM-[0-9]{4})$"
+        "pattern": "^(F-[0-9]{6}|CALC-[0-9]{5}|NRM-[0-9]{5}|NORM-[0-9]{5}|ASM-[0-9]{4})$"
       },
       "description": "записи реестра, которые карта показывает (image: fact_ids)"
     },

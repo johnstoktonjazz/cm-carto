@@ -5,7 +5,6 @@ from pathlib import Path
 
 import ezdxf
 import yaml
-from pyproj import Transformer
 
 from cm_carto import project as project_mod
 from cm_carto.ingest import cli
@@ -22,8 +21,8 @@ def project_in(tmp_path: Path) -> project_mod.Project:
 
 def origin(project) -> tuple[float, float]:
     """Точка в охвате проекта, в его системе координат: от нее строятся тестовые чертежи и выписки."""
-    xmin, ymin, xmax, ymax = project.extent_wgs84
-    return Transformer.from_crs(4326, project.crs, always_xy=True).transform((xmin + xmax) / 2, (ymin + ymax) / 2)
+    xmin, ymin, xmax, ymax = project.extent
+    return (xmin + xmax) / 2, (ymin + ymax) / 2
 
 
 def square(x, y, size=100.0):

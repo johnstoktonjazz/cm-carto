@@ -5,11 +5,12 @@ from pathlib import Path
 import yaml
 
 WEST, SOUTH, EAST, NORTH = 38.000, 47.000, 38.010, 47.009
+EXTENT = [423900, 5205600, 424800, 5206700]   # те же места в UTM 37N, метры
 
 
 def project_file(folder: Path, **extra) -> Path:
     data = {"name": "синтетический проект", "crs": {"name": "EPSG:32637", "definition": "EPSG:32637"},
-            "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", "language": "ru", **extra}
+            "extent": EXTENT, "extent_wgs84": [WEST, SOUTH, EAST, NORTH], "geo": "geo", "inputs": "input", "language": "ru", **extra}
     path = folder / "project.yaml"
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     return path
@@ -161,6 +162,6 @@ def overture_cache(project) -> Path:
          "geometry": shapely.Point(38.0055, 47.0041), "sources": google},
     ])
     import yaml
-    (folder / "SOURCE.yaml").write_text(yaml.safe_dump({"release": RELEASE, "extent_wgs84": list(project.extent_wgs84)}),
+    (folder / "SOURCE.yaml").write_text(yaml.safe_dump({"release": RELEASE, "extent_wgs84": list(project.fetch_extent_wgs84)}),
                                         encoding="utf-8")
     return folder

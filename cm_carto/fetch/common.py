@@ -49,8 +49,8 @@ class Names:
 
 
 def extent(project: Project) -> shapely.Polygon:
-    """Охват из project.yaml в системе координат проекта; стороны разбиты, чтобы дуги параллелей не спрямлялись."""
-    box = gpd.GeoSeries([shapely.box(*project.extent_wgs84)], crs="EPSG:4326").segmentize(0.001)
+    """Охват выгрузок внешних источников в системе координат проекта; стороны разбиты, чтобы дуги параллелей не спрямлялись."""
+    box = gpd.GeoSeries([shapely.box(*project.fetch_extent_wgs84)], crs="EPSG:4326").segmentize(0.001)
     return box.to_crs(project.crs).iloc[0]
 
 
