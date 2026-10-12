@@ -21,6 +21,7 @@ class Report:
     fixed: list[str] = field(default_factory=list)
     confirm: list[str] = field(default_factory=list)
     ignored: list[str] = field(default_factory=list)
+    unknown_layers: list[tuple[str, int]] = field(default_factory=list)   # слои чертежа без правила и не в ignore: (имя, объектов)
     changes: list[str] = field(default_factory=list)
 
     def compare(self, before: set[str] | None, after: set[str]) -> None:

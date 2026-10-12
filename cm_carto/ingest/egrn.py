@@ -64,8 +64,8 @@ def ingest(path, rules: dict, project: Project, report: Report) -> dict[str, gpd
     source = common.Source(None, rules["source_label"].format(
         registration_number=need(root, f"{requisites}/registration_number", path.name),
         organ=need(root, f"{requisites}/organ_registr_rights", path.name)),
-        need(root, f"{requisites}/date_formation", path.name))
-    status = rules["status"]
+        need(root, f"{requisites}/date_formation", path.name), rules["status"])
+    status = source.status
     rows = defaultdict(list)
 
     for rec in root.iter("land_record"):

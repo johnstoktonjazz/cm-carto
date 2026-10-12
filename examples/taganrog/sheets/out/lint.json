@@ -25,13 +25,5 @@
   "errors": 0,
   "warnings": 0,
   "not_implemented": {},
-  "notes": [
-    {
-      "rule": "T19",
-      "n": 3,
-      "id": "K1-03",
-      "place": "title",
-      "message": "заголовок слайда 57 знаков при цели 50"
-    }
-  ]
+  "notes": []
 }

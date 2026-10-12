@@ -286,27 +286,27 @@
       "stage": "перенос",
       "title": "анкета базы: project.name, territory.crs (cm_core 0.4.2)",
       "agent": "anketa-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "e9c1dc3"
     },
     {
       "id": "M2",
       "stage": "перенос",
       "title": "статус DXF/SHP/GPKG из паспорта источника; неизвестный слой — предупреждение",
       "agent": "ingest-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "статус из паспорта (official только с doc), неизвестный слой — предупреждение"
     },
     {
       "id": "M3",
       "stage": "перенос",
       "title": "doctor: начертания Open Sans на macOS; ошибки CLI и fetch без сети — понятным текстом",
       "agent": "cli-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "b502b93, f6ae9e6"
     },
     {
       "id": "M4",

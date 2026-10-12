@@ -329,6 +329,7 @@ def make_dxf(blocks, rnd) -> Path:
         "rules": "ppt",
         "label": f"{SKETCH}: проект планировки, чертеж красных линий",
         "date": DATE,
+        "status": "concept",    # синтетический образец без номера документа: official ему не положен
     }, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return path
 

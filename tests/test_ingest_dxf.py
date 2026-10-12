@@ -153,6 +153,71 @@ def test_missing_source_passport_fails(tmp_path):
         ingest(project, file)
 
 
+def quarter_dxf(tmp_path, **passport):
+    """Чертеж с одним кварталом и паспортом с заданным статусом (status=None — без статуса)."""
+    project = project_in(tmp_path)
+    x, y = origin(project)
+    file = make_dxf(tmp_path / "plan.dxf", lambda msp, doc: msp.add_lwpolyline(square(x, y), close=True, dxfattribs={"layer": "Кварталы"}))
+    write_source(file, **passport)
+    return project, file
+
+
+def test_passport_without_status_is_refused(tmp_path):
+    project, file = quarter_dxf(tmp_path, status=None)
+    with pytest.raises(ValueError, match="нет полей \\['status'\\]"):
+        ingest(project, file)
+
+
+def test_unknown_status_is_refused(tmp_path):
+    project, file = quarter_dxf(tmp_path, status="approved")
+    with pytest.raises(ValueError, match="status «approved» — нужен один из"):
+        ingest(project, file)
+
+
+@pytest.mark.parametrize("status", ["cadastral", "calc"])
+def test_cadastral_and_calc_are_not_from_passport(tmp_path, status):
+    project, file = quarter_dxf(tmp_path, status=status)
+    with pytest.raises(ValueError, match="нужен один из"):
+        ingest(project, file)
+
+
+def test_official_without_doc_is_refused(tmp_path):
+    project, file = quarter_dxf(tmp_path, status="official")
+    with pytest.raises(ValueError, match="official — только утвержденный документ: в паспорте нет doc"):
+        ingest(project, file)
+
+
+def test_official_with_doc_is_official(tmp_path):
+    project, file = quarter_dxf(tmp_path, status="official", doc="DOC-0007")
+    out, report = ingest(project, file)
+    frame = gpkg.read(out)["blocks"]
+    assert set(frame.status) == {"official"} and set(frame.source_doc) == {"DOC-0007"}
+    assert "Статус: official (паспорт источника)" in report.header
+    assert gpkg.check(out) == []
+
+
+def test_working_drawing_is_concept(tmp_path):
+    project, file = quarter_dxf(tmp_path, status="concept")
+    out, report = ingest(project, file)
+    assert set(gpkg.read(out)["blocks"].status) == {"concept"}
+    assert "Статус: concept (паспорт источника)" in report.header
+
+
+def test_digitized_drawing_needs_origin(tmp_path):
+    project, file = quarter_dxf(tmp_path, status="digitized")
+    with pytest.raises(ValueError, match="digitized требует digitized_from"):
+        ingest(project, file)
+
+
+def test_unknown_layer_is_listed_and_does_not_stop_the_part(tmp_path):
+    def draw(msp, doc, x, y):
+        msp.add_lwpolyline(square(x, y), close=True, dxfattribs={"layer": "Кварталы"})
+        msp.add_line((x, y), (x + 10, y + 10), dxfattribs={"layer": "Прочее"})
+    frames, report, _ = run(tmp_path, draw)
+    assert len(frames["blocks"]) == 1
+    assert report.unknown_layers == [("Прочее", 1)]
+
+
 def test_nothing_recognized_fails_with_report(tmp_path):
     project = project_in(tmp_path)
     file = make_dxf(tmp_path / "plan.dxf", lambda msp, doc: msp.add_line((0, 0), (1, 1), dxfattribs={"layer": "Прочее"}))
@@ -175,8 +240,9 @@ def test_sample_dxf(tmp_path):
     assert {k: len(v) for k, v in frames.items()} == {"boundary_planning": 1, "red_lines": 18, "blocks": 15, "sites": 6}
     assert set(frames["blocks"].num) >= {"1", "8а", "11", "15"}
     for frame in frames.values():
-        assert set(frame.status) == {"official"} and frame.source_label.str.startswith("синтетический образец").all()
+        assert set(frame.status) == {"concept"} and frame.source_label.str.startswith("синтетический образец").all()
         assert (frame.source_date == "2026-10-11").all()
+    assert "Статус: concept (паспорт источника)" in report.header
     assert any("замкнут разрыв 0,30 м" in line for line in report.fixed)
     assert any("самопересечение" in line for line in report.fixed)
     assert [line.split(":")[0] for line in report.unrecognized] == ["слой «Инженерные_сети»"]

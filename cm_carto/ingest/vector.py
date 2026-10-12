@@ -1,6 +1,6 @@
 """Векторные файлы третьих лиц (SHP, GPKG) → слои геопакета по rules/vector.yaml.
 
-Слой или файл источника по шаблону имени → слой контракта; поля источника → атрибуты слоя. Геометрия пересчитывается
+Слой или файл источника по шаблону имени → слой контракта; поля источника → атрибуты слоя. Статус — из паспорта источника. Геометрия пересчитывается
 в систему координат проекта один раз здесь; система координат файла обязательна.
 """
 
@@ -23,7 +23,7 @@ def source_layers(path: Path) -> list[str]:
 
 
 def ingest(path: Path, source: common.Source, rules: dict, project: Project, report: Report) -> dict[str, gpd.GeoDataFrame]:
-    status = rules["status"]
+    status = source.status
     rows = defaultdict(list)
     systems = set()
     for name in source_layers(path):

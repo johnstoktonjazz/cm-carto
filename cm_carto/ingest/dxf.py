@@ -196,7 +196,7 @@ def numbered(geoms: list, texts: list[tuple[str, tuple[float, float]]], rule: di
 
 def ingest(path, source: common.Source, rules: dict, project: Project, report: Report) -> dict[str, gpd.GeoDataFrame]:
     doc = ezdxf.readfile(path)
-    status = rules["status"]
+    status = source.status
     tolerance, arc_tolerance = rules["tolerance_m"], rules["arc_tolerance_m"]
 
     drawn = defaultdict(lambda: defaultdict(list))     # правило → слой чертежа → ломаные
@@ -252,6 +252,7 @@ def ingest(path, source: common.Source, rules: dict, project: Project, report: R
     for (layer, kind), n in sorted(skipped.items()):
         report.unrecognized.append(f"слой «{layer}»: {n} объектов типа {kind} правило не разбирает")
     for layer, kinds in sorted(other.items()):
+        report.unknown_layers.append((layer, sum(kinds.values())))
         report.unrecognized.append(f"слой «{layer}»: нет правила раскладки, {sum(kinds.values())} объектов "
                                    f"({', '.join(f'{k} {n}' for k, n in sorted(kinds.items()))})")
     report.ignored += [f"слой «{layer}»: {n} объектов" for layer, n in sorted(ignored.items())]

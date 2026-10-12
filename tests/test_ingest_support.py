@@ -29,8 +29,9 @@ def square(x, y, size=100.0):
     return [(x, y), (x + size, y), (x + size, y + size), (x, y + size)]
 
 
-def write_source(path: Path, rules="ppt", label="тестовый образец", date="2026-10-11", **extra) -> None:
-    data = {"rules": rules, "label": label, "date": date, **extra}
+def write_source(path: Path, rules="ppt", label="тестовый образец", date="2026-10-11", status="concept", **extra) -> None:
+    """Паспорт источника; status=None — паспорт без статуса."""
+    data = {"rules": rules, "label": label, "date": date, **({"status": status} if status else {}), **extra}
     (path.parent / (path.name + ".source.yaml")).write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
 
 

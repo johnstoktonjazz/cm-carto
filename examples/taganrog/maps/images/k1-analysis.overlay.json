@@ -6,14 +6,14 @@
   {
    "fact_ids": [],
    "features": [
-    {"fact_ids": [], "id": "boundary_planning:ga9cdffac6b20", "rings": [[[120.3, 114.63], [159.69, 92.29], [160.32, 88.87], [143.13, 72.74], [124.0, 55.18], [81.93, 78.94], [120.3, 114.63]]], "status": "official"}
+    {"fact_ids": [], "id": "boundary_planning:ga9cdffac6b20", "rings": [[[120.3, 114.63], [159.69, 92.29], [160.32, 88.87], [143.13, 72.74], [124.0, 55.18], [81.93, 78.94], [120.3, 114.63]]], "status": "concept"}
    ],
    "id": "territory",
    "kind": "polygon",
    "role": "territory",
    "simplify_mm": 0.1,
    "source_label": "синтетический образец: проект планировки, чертеж красных линий",
-   "status": "official"
+   "status": "concept"
   },
   {
    "fact_ids": ["ASM-9001"],

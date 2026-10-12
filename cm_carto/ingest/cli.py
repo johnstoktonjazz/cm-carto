@@ -1,6 +1,6 @@
 """Команда `cm-carto ingest <project.yaml> <файл или папка>`: часть геопакета и отчет импорта на каждый вход.
 
-Вход — DXF (паспорт `<файл>.source.yaml` с правилами, подписью и датой), выписка КПТ (XML), SHP или GPKG третьих
+Вход — DXF (паспорт `<файл>.source.yaml` с правилами, подписью, датой и статусом), выписка КПТ (XML), SHP или GPKG третьих
 лиц (паспорт обязателен). Папка — файлы в ней без вложенных папок. Результат — `<geo>/parts/ingest-<имя>.gpkg` и
 `ingest-<имя>.report.md`.
 """
@@ -28,7 +28,8 @@ def ingest_file(project: project_mod.Project, file: Path) -> tuple[Path, report_
         rules = applied.rules
         if rules["type"] != RULES_TYPE[suffix]:
             raise ValueError(f"{file.name}: правила {source.rules} типа {rules['type']}, для {suffix} нужны {RULES_TYPE[suffix]}")
-        report.header += [f"Источник: {source.label}, {source.date}", *applied.header(project)]
+        report.header += [f"Источник: {source.label}, {source.date}", f"Статус: {source.status} (паспорт источника)",
+                          *applied.header(project)]
         frames = (dxf if suffix == ".dxf" else vector).ingest(file, source, rules, project, report)
         inputs = [file, common.source_path(file), *applied.files]
     return common.write_part(project, file.stem, frames, report, inputs), report
@@ -44,6 +45,8 @@ def run(args) -> int:
         raise ValueError(f"имена входов повторяются без учета расширения: {stems}")
     for file in files:
         out, report = ingest_file(project, file)
+        for layer, count in report.unknown_layers:
+            print(f"предупреждение: слой «{layer}» не распознан, {count} объектов — в ignore или правило проекта")
         total = sum(n for _, dst, n in report.recognized if "." not in dst)
         print(f"{file.name}: объектов {total}, не распознано {len(report.unrecognized)}, исправлено {len(report.fixed)}, "
               f"на подтверждение {len(report.confirm)} → {out}, отчет {out.with_suffix('.report.md')}")

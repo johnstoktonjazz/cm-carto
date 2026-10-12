@@ -89,7 +89,7 @@ def test_project_rule_wins_over_module_rule(tmp_path):
 
 
 def test_standalone_project_rules_without_extends(tmp_path):
-    standalone = {"type": "dxf", "status": "concept", "tolerance_m": 0.5, "arc_tolerance_m": 0.05, "ignore": ["0"],
+    standalone = {"type": "dxf", "tolerance_m": 0.5, "arc_tolerance_m": 0.05, "ignore": ["0"],
                   "layers": OWN_LAYERS}
     project, _ = project_with_rules(tmp_path, {"layout": standalone})
     out, report = ingest(project, custom_dxf(tmp_path, project, passport="layout"))
@@ -97,6 +97,13 @@ def test_standalone_project_rules_without_extends(tmp_path):
     assert sorted(frames["blocks"].object_id) == ["blocks:5"] and set(frames["blocks"].status) == {"concept"}
     assert any("«Кварталы»" in line for line in report.unrecognized)          # типовых правил в самостоятельном файле нет
     assert report.header[-1] == "Правила проекта: rules/layout.yaml"
+
+
+def test_project_rules_with_status_are_refused(tmp_path):
+    """Статус — свойство документа (паспорт источника), а не раскладки: ключ в правилах проекта — ошибка схемы."""
+    project, folder = project_with_rules(tmp_path, {"ppt": {"extends": "ppt", "layers": OWN_LAYERS, "status": "official"}})
+    with pytest.raises(ValueError, match=re.escape(str(folder / "ppt.yaml")) + r".*\n.*status"):
+        ingest(project, custom_dxf(tmp_path, project))
 
 
 def test_project_layer_outside_contract_names_project_file(tmp_path):

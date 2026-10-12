@@ -11,15 +11,19 @@ from cm_carto import gpkg
 from cm_carto.ingest.report import Report
 from cm_carto.project import Project
 
-SOURCE_KEYS = {"rules", "label", "date", "license", "doc", "digitized_from"}
+SOURCE_KEYS = {"rules", "label", "date", "status", "license", "doc", "digitized_from"}
+# Статус объектов DXF, SHP, GPKG задает паспорт источника, а не правила раскладки. cadastral — природа выписки ЕГРН
+# (правила egrn), calc — расчет картографа: из паспорта ни тот, ни другой не берутся.
+SOURCE_STATUSES = ("official", "concept", "digitized", "reference")
 
 
 @dataclass(frozen=True)
 class Source:
-    """Паспорт документа: подпись, дата, лицензия — то, чего нет в самом файле."""
+    """Паспорт документа: подпись, дата, статус, лицензия — то, чего нет в самом файле."""
     rules: str | None
     label: str
     date: str
+    status: str
     license: str | None = None
     doc: str | None = None
     digitized_from: str | None = None
@@ -32,16 +36,26 @@ def source_path(file: Path) -> Path:
 def load_source(file: Path) -> Source:
     path = source_path(file)
     if not path.exists():
-        raise FileNotFoundError(f"{file.name}: нет паспорта источника {path.name} (rules, label, date)")
+        raise FileNotFoundError(f"{file.name}: нет паспорта источника {path.name} (rules, label, date, status)")
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     unknown = set(data) - SOURCE_KEYS
-    missing = {"rules", "label", "date"} - set(data)
+    missing = {"rules", "label", "date", "status"} - set(data)
     if unknown or missing:
         raise ValueError(f"{path}: лишние поля {sorted(unknown)}, нет полей {sorted(missing)}")
     date = str(data["date"])
     if not re.fullmatch(r"[0-9]{4}-[0-9]{2}(-[0-9]{2})?", date):
         raise ValueError(f"{path}: date «{date}» — нужна ГГГГ-ММ-ДД или ГГГГ-ММ")
-    return Source(data["rules"], data["label"], date, data.get("license"), data.get("doc"), data.get("digitized_from"))
+    status = data["status"]
+    if status not in SOURCE_STATUSES:
+        raise ValueError(f"{path}: status «{status}» — нужен один из {', '.join(SOURCE_STATUSES)}")
+    if status == "official" and not data.get("doc"):
+        raise ValueError(f"{path}: official — только утвержденный документ: в паспорте нет doc "
+                         f"(рабочий, неутвержденный чертеж — status: concept)")
+    if status == "digitized" and not data.get("digitized_from"):
+        raise ValueError(f"{path}: digitized требует digitized_from (с какого документа или слайда, кем и когда)")
+    if status == "reference" and not data.get("license"):
+        raise ValueError(f"{path}: reference требует license (лицензия источника, source_license в геопакете)")
+    return Source(data["rules"], data["label"], date, status, data.get("license"), data.get("doc"), data.get("digitized_from"))
 
 
 def row(layer: str, key: str, geom, source: Source, status: str, kind: str, name: str | None = None, **attrs) -> dict:

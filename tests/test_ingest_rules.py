@@ -58,10 +58,37 @@ def test_schema_violation_is_refused(custom_rules):
         rules.load("bad")
 
 
+@pytest.mark.parametrize("base", ["ppt", "vector"])
+def test_status_in_dxf_and_vector_rules_is_refused(custom_rules, base):
+    custom_rules("bad", base, lambda d: d.update(status="official"))
+    with pytest.raises(ValueError, match="status"):
+        rules.load("bad")
+
+
+@pytest.mark.parametrize("name", ["ppt", "vector"])
+def test_repository_dxf_and_vector_rules_have_no_status(name):
+    assert "status" not in rules.load(name)
+    assert rules.load("egrn")["status"] == "cadastral"       # природа выписки — в правилах
+
+
 def test_zouit_type_must_be_from_contract(custom_rules):
     custom_rules("bad", "egrn", lambda d: d["zouit_types"][0].update(zouit_type="radioactive"))
     with pytest.raises(ValueError, match="zouit_type radioactive не из перечня"):
         rules.load("bad")
+
+
+def test_unknown_layer_is_a_warning_not_an_error(tmp_path, capsys):
+    """Слой чертежа без правила: строка предупреждения с именем и числом объектов, часть записана, код 0."""
+    project_path = tmp_path / "project.yaml"
+    project_path.write_text(EXAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    parser = argparse.ArgumentParser()
+    cli.add_parser(parser.add_subparsers(dest="command", required=True))
+    args = parser.parse_args(["ingest", str(project_path), str(SAMPLES / "dxf" / "ppt-sample.dxf")])
+    assert args.func(args) == 0
+    out = capsys.readouterr().out
+    assert "предупреждение: слой «Инженерные_сети» не распознан, 3 объектов — в ignore или правило проекта" in out.splitlines()
+    assert (tmp_path / "geo" / "parts" / "ingest-ppt-sample.gpkg").exists()
+    assert "слой «Инженерные_сети»: нет правила раскладки" in (tmp_path / "geo/parts/ingest-ppt-sample.report.md").read_text(encoding="utf-8")
 
 
 def test_command_ingests_folder_and_file(tmp_path, capsys):

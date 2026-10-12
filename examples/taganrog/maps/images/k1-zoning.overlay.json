@@ -58,14 +58,14 @@
   {
    "fact_ids": [],
    "features": [
-    {"fact_ids": [], "id": "boundary_planning:ga9cdffac6b20", "rings": [[[188.32, 171.58], [274.99, 122.43], [276.37, 114.91], [238.55, 79.42], [196.48, 40.79], [103.92, 93.04], [188.32, 171.58]]], "status": "official"}
+    {"fact_ids": [], "id": "boundary_planning:ga9cdffac6b20", "rings": [[[188.32, 171.58], [274.99, 122.43], [276.37, 114.91], [238.55, 79.42], [196.48, 40.79], [103.92, 93.04], [188.32, 171.58]]], "status": "concept"}
    ],
    "id": "territory",
    "kind": "polygon",
    "role": "territory",
    "simplify_mm": 0.1,
    "source_label": "синтетический образец: проект планировки, чертеж красных линий",
-   "status": "official"
+   "status": "concept"
   },
   {
    "features": [
