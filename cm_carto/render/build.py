@@ -91,6 +91,10 @@ class Drawn:
         if not isinstance(renderer, QgsCategorizedSymbolRenderer):
             return []
         present = {row[renderer.classAttribute()] for row in self.rows}
+        missing = sorted(present - {c.value() for c in renderer.categories()})
+        if missing:
+            raise ValueError(f"роль {self.role.key}: категорий {', '.join(map(str, missing))} нет в стиле верстки "
+                             f"({renderer.classAttribute()}): объекты не нарисовались бы; категория — в map.yaml и .qml верстки")
         return [(c.value(), c.label()) for c in renderer.categories() if c.value() in present]
 
 

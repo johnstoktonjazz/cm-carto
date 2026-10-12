@@ -546,3 +546,18 @@ def test_scale_bar_both_corners_busy_is_error():
     point = {"id": "stop", "role": "stop", "kind": "point", "features": [{"id": "s1", "at": [20.0, 195.0]}]}
     with pytest.raises(ValueError, match="левый нижний угол — stop:s1"):
         overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [reach, point], None)
+
+
+def test_zone_category_missing_from_style_is_refused(project):
+    """Категория зоны, которой нет в стиле верстки (СХ geopackage 1.2.0 до map.yaml и zoning.qml), не пропадает молча:
+    сборка падает с именем категории. Значение пишется в файл в обход схемы — так придут данные 1.2.0."""
+    data = project / "geo" / "agro.gpkg"
+    shutil.copy(project / "geo" / "project.gpkg", data)
+    from osgeo import ogr  # GDAL: триггеры GPKG вызывают его функции SQL
+    ogr.UseExceptions()
+    source = ogr.Open(str(data), 1)
+    source.ExecuteSQL("UPDATE zones_pzz SET zone = 'СХ' WHERE object_id = 'zones_pzz:zh'")
+    source = None
+    with pytest.raises(ValueError, match="категорий СХ нет в стиле верстки"):
+        build.render(describe(project, "agro", layers={"zoning": {"layer": "zones_pzz"}, "blocks": {}},
+                              data="geo/agro.gpkg"))

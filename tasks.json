@@ -214,27 +214,27 @@
       "stage": "перенос",
       "title": "дефект стыка 1: охват и геопакет в СК проекта; fetch без параметров перехода — отказ",
       "agent": "crs-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "3044a9b: extent в СК проекта, require_wgs84 (без ballpark), test_project_crs.py"
     },
     {
       "id": "D2",
       "stage": "перенос",
       "title": "дефект стыка 2: правила раскладки проекта рядом с анкетой (rules проекта, extends)",
       "agent": "ingest-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "fd87ccc: папка rules анкеты, extends; test_ingest_project_rules.py"
     },
     {
       "id": "D3",
       "stage": "перенос",
       "title": "дефект стыка 3: подписи объектов из атрибута (label в описании карты), выноски у площадей",
       "agent": "render-dev",
-      "status": "in_progress",
+      "status": "done",
       "after": [],
-      "note": ""
+      "note": "3044a9b: label/label_style в описании карты 1.1.0, выноски у площадей; подписи линий — вопрос"
     },
     {
       "id": "D4",
@@ -250,9 +250,9 @@
       "stage": "перенос",
       "title": "NRM- вместо NORM-: overlay 1.2.0 в main, geopackage 1.2.0, правила анализа; синтетика — после geopackage 1.2.0 и fact 1.1.0",
       "agent": "оркестратор",
-      "status": "in_progress",
+      "status": "blocked",
       "after": [],
-      "note": ""
+      "note": "overlay 1.2.0 в main (f049f48), geopackage 1.2.0 в ветке, правила анализа и описание карты принимают NRM-; синтетика — после geopackage 1.2.0 и fact 1.1.0"
     },
     {
       "id": "D6",
