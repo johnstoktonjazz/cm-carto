@@ -8,6 +8,7 @@
 import shutil
 from datetime import date as today
 from pathlib import Path
+from urllib.parse import urlparse
 
 import geopandas as gpd
 import osmnx as ox
@@ -34,6 +35,17 @@ def query(project: Project) -> str:
             f"({keys});(._;>>;);out meta;")
 
 
+def overpass(project: Project, folder: Path) -> bytes:
+    """Ответ Overpass на запрос по охвату; отказ сети или сервера — понятная ошибка с путем кеша."""
+    url = rules()["osm"]["overpass_url"]
+    try:
+        answer = requests.post(url, data={"data": query(project)}, timeout=rules()["osm"]["overpass_timeout_s"])
+        answer.raise_for_status()
+    except requests.RequestException as error:
+        raise common.unreachable("osm", urlparse(url).netloc, folder, error) from error
+    return answer.content
+
+
 def download(project: Project, file: Path | None = None, date: str | None = None) -> Path:
     """Кеш выгрузки: файл data.osm и SOURCE.yaml. Готовый кеш сеть не трогает."""
     folder = cache_dir(project)
@@ -51,10 +63,7 @@ def download(project: Project, file: Path | None = None, date: str | None = None
         shutil.copyfile(file, folder / "data.osm")
         origin = f"файл {file.name}"
     else:
-        answer = requests.post(rules()["osm"]["overpass_url"], data={"data": query(project)},
-                               timeout=rules()["osm"]["overpass_timeout_s"])
-        answer.raise_for_status()
-        (folder / "data.osm").write_bytes(answer.content)
+        (folder / "data.osm").write_bytes(overpass(project, folder))
         date, origin = today.today().isoformat(), rules()["osm"]["overpass_url"]
     info = {"source": "OpenStreetMap contributors", "origin": origin, "date": date, "extent_wgs84": bounds,
             "license": rules()["osm"]["license"], "file": "data.osm"}

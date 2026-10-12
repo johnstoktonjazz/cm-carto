@@ -31,7 +31,12 @@ def main(argv=None) -> None:
     analysis_cli.add_parser(commands)
     render_cli.add_parser(commands)
     args = parser.parse_args(argv)
-    sys.exit(args.func(args))
+    try:
+        code = args.func(args)
+    except (ValueError, FileNotFoundError) as error:  # ошибки проверок с понятным текстом; прочие исключения — ошибки кода
+        print(f"ошибка: {error}", file=sys.stderr)
+        sys.exit(1)
+    sys.exit(code)
 
 
 if __name__ == "__main__":

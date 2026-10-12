@@ -39,11 +39,32 @@ CRS = "EPSG:3395"  # мировая Меркатора: любая метрич�
 MIN_QGIS = 34400
 
 
+def split_face(face: str, family: str) -> tuple[str, str]:
+    """Имя начертания из токенов -> (семейство, стиль): у основного начертания стиль Regular, у остальных — остаток имени
+    после семейства («Open Sans SemiBold» -> «Open Sans», «SemiBold»). Так шрифт берет рендер QGIS: fontFamily + namedStyle."""
+    if face == family:
+        return family, "Regular"
+    if not face.startswith(family + " "):
+        raise ValueError(f"начертание «{face}» не начинается с семейства «{family}» (font.faces.regular в style.yaml)")
+    return family, face[len(family) + 1:]
+
+
+def font_styles(family: str) -> list[str]:
+    """Стили семейства в системе; Linux (fontconfig) и macOS (CoreText) дают для «Open Sans» одно и то же."""
+    return QFontDatabase().styles(family)
+
+
 def check_fonts() -> list[str]:
     faces = tokens.load("style")["font"]["faces"]
-    db = QFontDatabase()
-    families = set(db.families())
-    return [f"шрифт {face} ({role}) не установлен" for role, face in faces.items() if face not in families]
+    errors = []
+    for role, face in faces.items():
+        family, style = split_face(face, faces["regular"])
+        styles = font_styles(family)
+        if not styles:
+            errors.append(f"шрифт {face} ({role}) не установлен: нет семейства {family}")
+        elif style not in styles:
+            errors.append(f"шрифт {face} ({role}) не установлен: в семействе {family} нет стиля {style} (есть: {', '.join(styles)})")
+    return errors
 
 
 def check_contracts() -> list[str]:

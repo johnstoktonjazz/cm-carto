@@ -54,6 +54,11 @@ def extent(project: Project) -> shapely.Polygon:
     return box.to_crs(project.crs).iloc[0]
 
 
+def unreachable(source: str, host: str, cache: Path, error: Exception) -> ValueError:
+    """Понятный отказ источника без сети; вызывающий делает `raise unreachable(...) from error`."""
+    return ValueError(f"нет доступа к {host}: fetch {source} требует сети или кеша {cache}; {' '.join(str(error).split())}")
+
+
 def license_name(raw: str) -> str:
     return rules()["licenses"].get(raw, raw)
 

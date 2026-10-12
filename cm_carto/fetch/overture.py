@@ -75,7 +75,10 @@ def download(project: Project, release: str) -> Path:
         target = folder / (source.replace("/", "-") + ".parquet")
         if target.exists():
             continue
-        table = _select(release, source, item["columns"], bounds)
+        try:
+            table = _select(release, source, item["columns"], bounds)
+        except OSError as error:  # pyarrow отдает отказ S3 (сеть, прокси, нет выпуска) как OSError
+            raise common.unreachable("overture", BUCKET.split("/")[0] + " (S3)", folder, error) from error
         table = table.replace_schema_metadata({"geo": json.dumps(GEO_METADATA)})
         pq.write_table(table, target, compression="zstd")
         print(f"overture {release}: {source}: {table.num_rows} записей")
