@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "tasks": [
     {
       "id": "T0.1",
@@ -208,6 +208,60 @@
         "T3.6"
       ],
       "note": "verifier: готова с условием; пять пунктов «исправить» закрыты (К-038); ждет приемки Романом"
+    },
+    {
+      "id": "D1",
+      "stage": "перенос",
+      "title": "дефект стыка 1: охват и геопакет в СК проекта; fetch без параметров перехода — отказ",
+      "agent": "crs-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "D2",
+      "stage": "перенос",
+      "title": "дефект стыка 2: правила раскладки проекта рядом с анкетой (rules проекта, extends)",
+      "agent": "ingest-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "D3",
+      "stage": "перенос",
+      "title": "дефект стыка 3: подписи объектов из атрибута (label в описании карты), выноски у площадей",
+      "agent": "render-dev",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "D4",
+      "stage": "перенос",
+      "title": "дефект стыка 4: категория зоны СХ в geopackage 1.2.0",
+      "agent": "оркестратор",
+      "status": "done",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "D5",
+      "stage": "перенос",
+      "title": "NRM- вместо NORM-: overlay 1.2.0 в main, geopackage 1.2.0, правила анализа; синтетика — после geopackage 1.2.0 и fact 1.1.0",
+      "agent": "оркестратор",
+      "status": "in_progress",
+      "after": [],
+      "note": ""
+    },
+    {
+      "id": "D6",
+      "stage": "перенос",
+      "title": "модели по Д-049: исполнители, включая render-dev, — Sonnet; Opus — только verifier",
+      "agent": "оркестратор",
+      "status": "done",
+      "after": [],
+      "note": ""
     }
   ]
 }

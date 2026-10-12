@@ -236,7 +236,7 @@
         },
         "norm": {
           "type": "string",
-          "pattern": "^NORM-[0-9]{5}$"
+          "pattern": "^(NRM|NORM)-[0-9]{5}$"
         },
         "norm_by_length": {
           "type": "array",
@@ -250,7 +250,7 @@
             "properties": {
               "norm": {
                 "type": "string",
-                "pattern": "^NORM-[0-9]{5}$"
+                "pattern": "^(NRM|NORM)-[0-9]{5}$"
               },
               "below_km": {
                 "type": "number",

@@ -164,3 +164,15 @@ def test_synthetic_registry_is_marked_and_valid():
         assert record["id"].startswith("NORM-9") and record["kind"] == "norm" and record["status"] == "check"
         assert record["sources"][0]["label"] == "синтетический образец, не норма"
         assert record["sources"][0]["doc_class"] == "C"
+
+
+
+def test_rules_accept_nrm_and_transitional_norm():
+    """fact 1.1.0 базы: нормы NRM-NNNNN, прежний NORM-NNNNN — переходно; иной префикс — ошибка схемы правил."""
+    schema = json.loads((paths.ROOT / "schema" / "analysis.schema.json").read_text(encoding="utf-8"))
+    validator = jsonschema.Draft202012Validator(schema)
+    rules = yaml.safe_load((paths.ROOT / "rules" / "analysis.yaml").read_text(encoding="utf-8"))
+    rule = next(r for r in rules["buffers"]["rules"].values() if "norm" in r)
+    for norm, valid in (("NRM-90001", True), ("NORM-90001", True), ("NR-90001", False)):
+        rule["norm"] = norm
+        assert (list(validator.iter_errors(rules)) == []) is valid, norm
