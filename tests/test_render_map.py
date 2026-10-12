@@ -548,16 +548,29 @@ def test_scale_bar_both_corners_busy_is_error():
         overlay.choose_corner(std, BAR_WIDTH, BAR_RIGHT, [reach, point], None)
 
 
-def test_zone_category_missing_from_style_is_refused(project):
-    """Категория зоны, которой нет в стиле верстки (СХ geopackage 1.2.0 до map.yaml и zoning.qml), не пропадает молча:
-    сборка падает с именем категории. Значение пишется в файл в обход схемы — так придут данные 1.2.0."""
-    data = project / "geo" / "agro.gpkg"
+def zone_gpkg(project, name: str, zone: str) -> str:
+    """Копия геопакета, где зона zones_pzz:zh — категории zone; значение пишется в обход схемы (как придут данные
+    версии контракта, которой стиль верстки еще не знает)."""
+    data = project / "geo" / f"{name}.gpkg"
     shutil.copy(project / "geo" / "project.gpkg", data)
     from osgeo import ogr  # GDAL: триггеры GPKG вызывают его функции SQL
     ogr.UseExceptions()
     source = ogr.Open(str(data), 1)
-    source.ExecuteSQL("UPDATE zones_pzz SET zone = 'СХ' WHERE object_id = 'zones_pzz:zh'")
+    source.ExecuteSQL(f"UPDATE zones_pzz SET zone = '{zone}' WHERE object_id = 'zones_pzz:zh'")
     source = None
-    with pytest.raises(ValueError, match="категорий СХ нет в стиле верстки"):
-        build.render(describe(project, "agro", layers={"zoning": {"layer": "zones_pzz"}, "blocks": {}},
-                              data="geo/agro.gpkg"))
+    return f"geo/{name}.gpkg"
+
+
+def test_zone_category_missing_from_style_is_refused(project):
+    """Категория зоны, которой нет в стиле верстки, не пропадает молча: сборка падает с именем категории."""
+    with pytest.raises(ValueError, match="категорий ХХ нет в стиле верстки"):
+        build.render(describe(project, "unknown-zone", layers={"zoning": {"layer": "zones_pzz"}, "blocks": {}},
+                              data=zone_gpkg(project, "unknown-zone", "ХХ")))
+
+
+def test_agricultural_zone_is_drawn(project):
+    """СХ (geopackage 1.2.0) есть в стиле верстки (map.yaml: zoning.categories, zoning.qml): зона в overlay и легенде."""
+    build.render(describe(project, "agro", layers={"zoning": {"layer": "zones_pzz"}, "blocks": {}},
+                          data=zone_gpkg(project, "agro", "СХ")))
+    doc = side(project, "agro", ".overlay.json")
+    assert {f["category"] for l in doc["layers"] if l["role"] == "zoning" for f in l["features"]} >= {"СХ"}
